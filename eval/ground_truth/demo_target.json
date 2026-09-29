@@ -1,0 +1,27 @@
+{
+  "description": "Labeled vulnerabilities in examples/demo_target. 'traps' are safe code that looks dangerous; reporting them counts as a false positive.",
+  "vulnerabilities": [
+    {"id": "V1",  "file": "app.py",       "line": 28,  "cwe": "CWE-89",  "title": "SQL injection in /users/search"},
+    {"id": "V2",  "file": "app.py",       "line": 44,  "cwe": "CWE-639", "title": "IDOR: GET /notes/<id> has no ownership check", "window": 4},
+    {"id": "V3",  "file": "app.py",       "line": 61,  "cwe": "CWE-78",  "title": "Command injection in /tools/ping"},
+    {"id": "V4",  "file": "app.py",       "line": 73,  "cwe": "CWE-22",  "title": "Path traversal in /files/<name>"},
+    {"id": "V5",  "file": "app.py",       "line": 93,  "cwe": "CWE-601", "title": "Open redirect via ?next="},
+    {"id": "V6",  "file": "app.py",       "line": 115, "cwe": "CWE-489", "title": "Werkzeug debugger enabled on 0.0.0.0",
+     "accept_cwes": ["CWE-94", "CWE-605", "CWE-668", "CWE-1188"]},
+    {"id": "V7",  "file": "auth.py",      "line": 19,  "cwe": "CWE-347", "title": "JWT signature verification disabled"},
+    {"id": "V8",  "file": "config.py",    "line": 3,   "cwe": "CWE-798", "title": "Hardcoded Flask session secret"},
+    {"id": "V9",  "file": "storage.py",   "line": 8,   "cwe": "CWE-502", "title": "pickle.loads on request body"},
+    {"id": "V10", "file": "fetcher.py",   "line": 9,   "cwe": "CWE-918", "title": "SSRF in /preview"},
+    {"id": "V11", "file": "assistant.py", "line": 14,  "cwe": "CWE-78",  "title": "LLM output executed as a shell command",
+     "accept_cwes": ["CWE-94", "CWE-77", "CWE-1427", "CWE-862"]}
+  ],
+  "traps": [
+    {"file": "app.py",     "line": 36, "reason": "ORDER BY column comes from an allowlist; owner id is bound"},
+    {"file": "app.py",     "line": 53, "reason": "DELETE enforces ownership in the query"},
+    {"file": "app.py",     "line": 67, "reason": "fixed argv, no shell"},
+    {"file": "app.py",     "line": 79, "reason": "realpath + prefix check"},
+    {"file": "storage.py", "line": 13, "reason": "yaml.safe_load"},
+    {"file": "storage.py", "line": 17, "reason": "md5 used as a cache key, not for security"},
+    {"file": "fetcher.py", "line": 16, "reason": "host allowlist, redirects disabled (and unused)"}
+  ]
+}

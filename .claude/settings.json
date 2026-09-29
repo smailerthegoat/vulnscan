@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Write(reports/**)",
+      "Edit(reports/**)",
+      "Bash(python3 -m vulnscan.db *)",
+      "Bash(python3 -m vulnscan.sast *)",
+      "Bash(python3 -m vulnscan.sanitize *)",
+      "Bash(python3 -m vulnscan.patchcheck *)",
+      "Bash(python3 -m vulnscan.evaluate *)",
+      "Bash(python3 -m vulnscan.stacks *)",
+      "Bash(python3 -m vulnscan.deps *)",
+      "Bash(python3 -m vulnscan.advisory *)",
+      "Bash(python3 -m vulnscan.scorecard *)",
+      "Bash(python3 -m vulnscan.cvss *)",
+      "Bash(git -C targets/* log *)",
+      "Bash(git -C targets/* diff *)",
+      "Bash(git -C targets/* show *)",
+      "Bash(git -C targets/* ls-files *)",
+      "Bash(git -C targets/* blame *)",
+      "Bash(ls *)",
+      "Bash(wc *)"
+    ],
+    "deny": [
+      "Write(targets/**)",
+      "Edit(targets/**)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Read(**/.env)",
+      "Read(**/.env.*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_targets.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

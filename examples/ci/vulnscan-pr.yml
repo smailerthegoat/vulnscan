@@ -1,0 +1,64 @@
+# Template: incremental security review of every pull request, results in GitHub code scanning.
+# Copy to .github/workflows/ in the repository you want reviewed and set VULNSCAN_REPO below.
+# Auth: CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`, uses your Claude subscription)
+#       or swap in `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}` for API billing.
+name: vulnscan
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF
+  id-token: write          # required by claude-code-action
+
+env:
+  VULNSCAN_REPO: your-user/vulnscan
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout vulnscan workspace
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.VULNSCAN_REPO }}
+
+      - name: Checkout code under review into targets/pr
+        uses: actions/checkout@v4
+        with:
+          path: targets/pr
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: pip install semgrep bandit
+
+      - name: Audit only what this PR changes
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: "/vuln-audit pr --diff origin/${{ github.base_ref }}"
+          claude_args: "--max-turns 200"
+
+      - name: Upload findings to code scanning
+        if: always() && hashFiles('reports/pr/results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/pr/results.sarif
+          checkout_path: targets/pr
+          category: vulnscan
+
+      - name: Keep the full report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnscan-report
+          path: |
+            reports/pr/report.md
+            reports/pr/findings.json
+            reports/pr/patches/*.diff
