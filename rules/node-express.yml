@@ -1,0 +1,1066 @@
+# vulnscan curated taint rules: Node.js / TypeScript servers (Express, Fastify, Koa, NestJS,
+# Next.js API routes) plus browser DOM XSS. Registry packs (p/javascript, p/typescript, p/nodejsscan,
+# p/expressjs) cover API misuse; these rules follow request data into dangerous sinks.
+# Tested by tests/rules/node-express.js and tests/rules/node-express.ts (`semgrep --test`).
+# Anchors are expanded on purpose: `semgrep --validate` does not resolve YAML aliases.
+rules:
+- id: vulnscan.js.sql-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: ERROR
+  message: Request data is built into a SQL string. Use placeholders (db.query('... WHERE id = ?', [id])) or the ORM's bound parameters.
+  metadata:
+    cwe:
+    - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command (''SQL Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: parseInt(...)
+  - pattern: parseFloat(...)
+  - pattern: Number(...)
+  - pattern: Number.parseInt(...)
+  - pattern: Boolean(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $DB.query($Q, ...)
+      - pattern: $DB.execute($Q, ...)
+      - pattern: $DB.raw($Q, ...)
+      - pattern: $DB.$queryRawUnsafe($Q, ...)
+      - pattern: $DB.$executeRawUnsafe($Q, ...)
+      - pattern: $DB.whereRaw($Q, ...)
+      - pattern: $DB.orderByRaw($Q, ...)
+      - pattern: $DB.havingRaw($Q, ...)
+      - pattern: $DB.joinRaw($Q, ...)
+      - pattern: $SEQ.literal($Q)
+    - focus-metavariable: $Q
+  - patterns:
+    - pattern-either:
+      - pattern: $DB.all($Q, ...)
+      - pattern: $DB.get($Q, ...)
+      - pattern: $DB.run($Q, ...)
+      - pattern: $DB.each($Q, ...)
+      - pattern: $DB.exec($Q, ...)
+      - pattern: $DB.prepare($Q, ...)
+      - pattern: $QB.where($Q, ...)
+      - pattern: $QB.andWhere($Q, ...)
+      - pattern: $QB.orWhere($Q, ...)
+    - metavariable-pattern:
+        metavariable: $Q
+        pattern-regex: (?i)\b(select|insert|update|delete|replace|where|order by|like)\b
+    - focus-metavariable: $Q
+- id: vulnscan.js.nosql-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: 'Request data is used as a MongoDB query object; a JSON body can inject operators such as {"$ne": null}. Cast values with String() or validate the schema.'
+  metadata:
+    cwe:
+    - 'CWE-943: Improper Neutralization of Special Elements in Data Query Logic'
+    category: security
+    confidence: LOW
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: String(...)
+  - pattern: $X.toString()
+  - pattern: parseInt(...)
+  - pattern: Number(...)
+  - pattern: mongoSanitize.sanitize(...)
+  - pattern: sanitize(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $M.find($Q, ...)
+      - pattern: $M.findOne($Q, ...)
+      - pattern: $M.findOneAndUpdate($Q, ...)
+      - pattern: $M.findOneAndDelete($Q, ...)
+      - pattern: $M.updateOne($Q, ...)
+      - pattern: $M.updateMany($Q, ...)
+      - pattern: $M.deleteOne($Q, ...)
+      - pattern: $M.deleteMany($Q, ...)
+      - pattern: $M.countDocuments($Q, ...)
+      - pattern: '$M.find({..., $where: $Q, ...})'
+    - pattern-not: $M.find(($X) => $BODY, ...)
+    - pattern-not: $M.find(function (...) { ... }, ...)
+    - pattern-not: $M.findOne(($X) => $BODY, ...)
+    - focus-metavariable: $Q
+- id: vulnscan.js.command-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: ERROR
+  message: Request data reaches a shell command or chooses the program. Use execFile/spawn with a fixed program and an argument array.
+  metadata:
+    cwe:
+    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS Command Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: parseInt(...)
+  - pattern: parseFloat(...)
+  - pattern: Number(...)
+  - pattern: Number.parseInt(...)
+  - pattern: Boolean(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: child_process.exec($CMD, ...)
+      - pattern: child_process.execSync($CMD, ...)
+      - pattern: child_process.execFile($CMD, ...)
+      - pattern: child_process.execFileSync($CMD, ...)
+      - pattern: child_process.spawn($CMD, ...)
+      - pattern: child_process.spawnSync($CMD, ...)
+      - pattern: require('child_process').$F($CMD, ...)
+      - pattern: shell.exec($CMD, ...)
+    - focus-metavariable: $CMD
+  - patterns:
+    - pattern-either:
+      - pattern: child_process.spawn("$SH", ["$FLAG", $ARG, ...], ...)
+      - pattern: child_process.execFile("$SH", ["$FLAG", $ARG, ...], ...)
+    - metavariable-regex:
+        metavariable: $SH
+        regex: ^(/usr)?(/bin/)?(sh|bash|zsh|cmd|cmd\.exe|powershell|pwsh)$
+    - metavariable-regex:
+        metavariable: $FLAG
+        regex: ^(-c|/c|/C|-Command)$
+    - focus-metavariable: $ARG
+  - patterns:
+    - pattern-either:
+      - pattern: 'child_process.spawn($CMD, $ARGS, {..., shell: true, ...})'
+      - pattern: 'child_process.spawnSync($CMD, $ARGS, {..., shell: true, ...})'
+    - focus-metavariable: $ARGS
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$EXEC = require(''child_process'').$FN;
+
+          ...
+
+          '
+      - pattern-inside: '$EXEC = require(''child_process'').$FN
+
+          ...
+
+          '
+    - metavariable-regex:
+        metavariable: $FN
+        regex: ^(exec|execSync)$
+    - pattern: $EXEC($CMD, ...)
+    - focus-metavariable: $CMD
+- id: vulnscan.js.code-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: ERROR
+  message: Request data is evaluated as JavaScript.
+  metadata:
+    cwe:
+    - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: parseInt(...)
+  - pattern: parseFloat(...)
+  - pattern: Number(...)
+  - pattern: Number.parseInt(...)
+  - pattern: Boolean(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: eval($X, ...)
+      - pattern: new Function(..., $X)
+      - pattern: Function(..., $X)
+      - pattern: setTimeout($X, ...)
+      - pattern: setInterval($X, ...)
+      - pattern: vm.runInNewContext($X, ...)
+      - pattern: vm.runInThisContext($X, ...)
+      - pattern: vm.runInContext($X, ...)
+      - pattern: vm.compileFunction($X, ...)
+      - pattern: new vm.Script($X, ...)
+    - focus-metavariable: $X
+- id: vulnscan.js.template-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: ERROR
+  message: Request data is compiled as a server-side template (SSTI, usually code execution).
+  metadata:
+    cwe:
+    - 'CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: ejs.render($T, ...)
+      - pattern: ejs.compile($T, ...)
+      - pattern: pug.render($T, ...)
+      - pattern: pug.compile($T, ...)
+      - pattern: Handlebars.compile($T, ...)
+      - pattern: handlebars.compile($T, ...)
+      - pattern: nunjucks.renderString($T, ...)
+      - pattern: _.template($T, ...)
+      - pattern: lodash.template($T, ...)
+      - pattern: doT.template($T, ...)
+    - focus-metavariable: $T
+- id: vulnscan.js.path-traversal
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data is used as a file path. Keep only path.basename() or resolve and check the prefix against the base directory.
+  metadata:
+    cwe:
+    - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path Traversal'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: path.basename(...)
+  - pattern: parseInt(...)
+  - pattern: Number(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: fs.$F($P, ...)
+      - pattern: fs.promises.$F($P, ...)
+    - metavariable-regex:
+        metavariable: $F
+        regex: ^(readFile|readFileSync|createReadStream|createWriteStream|writeFile|writeFileSync|appendFile|appendFileSync|unlink|unlinkSync|rm|rmSync|readdir|readdirSync|open|openSync|copyFile|copyFileSync|rename|renameSync)$
+    - focus-metavariable: $P
+  - patterns:
+    - pattern-either:
+      - pattern: $RES.sendFile($P, ...)
+      - pattern: $RES.download($P, ...)
+    - pattern-not: '$RES.sendFile($P, {..., root: $ROOT, ...}, ...)'
+    - focus-metavariable: $P
+- id: vulnscan.js.ssrf
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data controls the destination of a server-side HTTP request. Allowlist hosts and block internal addresses after DNS resolution.
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: '"$PFX" + $X'
+      - pattern: '`$PFX${$X}...`'
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^https?://[^/$]+/
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: fetch($U, ...)
+      - pattern: axios($U, ...)
+      - pattern: axios.$M($U, ...)
+      - pattern: http.get($U, ...)
+      - pattern: http.request($U, ...)
+      - pattern: https.get($U, ...)
+      - pattern: https.request($U, ...)
+      - pattern: got($U, ...)
+      - pattern: got.$M($U, ...)
+      - pattern: needle.$M($U, ...)
+      - pattern: superagent.$M($U, ...)
+      - pattern: request($U, ...)
+      - pattern: request.$M($U, ...)
+    - pattern-not: request.$M()
+    - focus-metavariable: $U
+- id: vulnscan.js.open-redirect
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data is used as a redirect target. Allow only relative paths ("/x", not "//host") or allowlisted hosts.
+  metadata:
+    cwe:
+    - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: '"$PFX" + $X'
+      - pattern: '`$PFX${$X}...`'
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^(/[^/\\]|https?://[^/$]+/)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $RES.redirect($U)
+      - pattern: $RES.redirect($CODE, $U)
+      - pattern: $RES.location($U)
+    - metavariable-regex:
+        metavariable: $RES
+        regex: ^(res|response|reply|ctx)$
+    - focus-metavariable: $U
+- id: vulnscan.js.reflected-xss
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data is sent as an HTML response without escaping (Express sends strings as text/html).
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: escape(...)
+  - pattern: escapeHtml(...)
+  - pattern: validator.escape(...)
+  - pattern: he.encode(...)
+  - pattern: he.escape(...)
+  - pattern: xss(...)
+  - pattern: sanitizeHtml(...)
+  - pattern: DOMPurify.sanitize(...)
+  - pattern: encodeURIComponent(...)
+  - pattern: parseInt(...)
+  - pattern: Number(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $RES.send($X)
+      - pattern: $RES.write($X, ...)
+      - pattern: $RES.end($X, ...)
+      - pattern: $RES.status($C).send($X)
+    - metavariable-regex:
+        metavariable: $RES
+        regex: ^(res|response)$
+    - focus-metavariable: $X
+- id: vulnscan.js.unsafe-deserialization
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: ERROR
+  message: Untrusted data is deserialized with a library that can revive functions (RCE).
+  metadata:
+    cwe:
+    - 'CWE-502: Deserialization of Untrusted Data'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: deserialization-config
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$S = require(''node-serialize'');
+
+              ...
+
+              '
+          - pattern-inside: 'import $S from ''node-serialize'';
+
+              ...
+
+              '
+        - pattern: $S.unserialize($X, ...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$S = require(''funcster'');
+
+              ...
+
+              '
+        - pattern: $S.deepDeserialize($X, ...)
+    - focus-metavariable: $X
+- id: vulnscan.js.regex-injection
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data is compiled into a regular expression (ReDoS). Escape it or use a fixed pattern.
+  metadata:
+    cwe:
+    - 'CWE-1333: Inefficient Regular Expression Complexity'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: escapeRegExp(...)
+  - pattern: _.escapeRegExp(...)
+  - pattern: escapeStringRegexp(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: new RegExp($X, ...)
+      - pattern: RegExp($X, ...)
+    - focus-metavariable: $X
+- id: vulnscan.js.prototype-pollution
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Request data supplies nested property names in an assignment (a "__proto__" key pollutes Object.prototype).
+  metadata:
+    cwe:
+    - 'CWE-1321: Improperly Controlled Modification of Object Prototype Attributes (''Prototype Pollution'')'
+    category: security
+    confidence: LOW
+    vulnscan-class: injection
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+      - pattern: $REQ.cookies
+      - pattern: $REQ.signedCookies
+      - pattern: $REQ.headers
+      - pattern: $REQ.files
+      - pattern: $REQ.file
+      - pattern: $REQ.url
+      - pattern: $REQ.originalUrl
+      - pattern: $REQ.path
+      - pattern: $REQ.get(...)
+      - pattern: $REQ.header(...)
+      - pattern: $REQ.param(...)
+      - pattern: $REQ.json()
+      - pattern: $REQ.formData()
+      - pattern: $REQ.text()
+      - pattern: $REQ.nextUrl.searchParams
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - patterns:
+    - pattern-either:
+      - pattern: $CTX.query
+      - pattern: $CTX.params
+      - pattern: $CTX.request.body
+      - pattern: $CTX.request.query
+      - pattern: $CTX.headers
+      - pattern: $CTX.cookies.get(...)
+    - metavariable-regex:
+        metavariable: $CTX
+        regex: ^ctx$
+  - patterns:
+    - pattern-either:
+      - pattern-inside: '$M(..., @$DECO(...) $P, ...) { ... }
+
+          '
+      - pattern-inside: '$M(..., @$DECO(...) $P: $T, ...) { ... }
+
+          '
+    - metavariable-regex:
+        metavariable: $DECO
+        regex: ^(Query|Param|Body|Headers|Req|Request|UploadedFile|Cookies)$
+    - pattern: $P
+  pattern-sinks:
+  - patterns:
+    - pattern: $OBJ[$K1][$K2] = $V
+    - focus-metavariable: $K1
+  - patterns:
+    - pattern-either:
+      - pattern: _.set($OBJ, $PATH, ...)
+      - pattern: _.setWith($OBJ, $PATH, ...)
+      - pattern: _.zipObjectDeep($PATH, ...)
+    - focus-metavariable: $PATH
+- id: vulnscan.js.dom-xss
+  mode: taint
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: URL-controlled data is written into the DOM as HTML.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: location.hash
+  - pattern: location.search
+  - pattern: location.href
+  - pattern: window.location.hash
+  - pattern: window.location.search
+  - pattern: window.location.href
+  - pattern: document.location.hash
+  - pattern: document.URL
+  - pattern: document.referrer
+  - pattern: window.name
+  - pattern: new URLSearchParams(...).get(...)
+  - pattern: $EVENT.data
+  pattern-sanitizers:
+  - pattern: DOMPurify.sanitize(...)
+  - pattern: encodeURIComponent(...)
+  - pattern: escapeHtml(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $EL.innerHTML = $X
+      - pattern: $EL.outerHTML = $X
+      - pattern: document.write($X)
+      - pattern: document.writeln($X)
+      - pattern: $EL.insertAdjacentHTML($POS, $X)
+      - pattern: $JQ.html($X)
+      - pattern: eval($X)
+    - focus-metavariable: $X
+- id: vulnscan.js.unsafe-html-render
+  languages:
+  - js
+  - ts
+  severity: WARNING
+  message: Non-constant HTML is rendered without sanitization (dangerouslySetInnerHTML / bypassSecurityTrust*). Check where the value comes from.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: LOW
+    vulnscan-class: web
+  pattern-either:
+  - patterns:
+    - pattern: '<$EL dangerouslySetInnerHTML={{__html: $X}} />'
+    - pattern-not: '<$EL dangerouslySetInnerHTML={{__html: "..."}} />'
+    - pattern-not: '<$EL dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(...)}} />'
+    - pattern-not: '<$EL dangerouslySetInnerHTML={{__html: sanitize(...)}} />'
+  - patterns:
+    - pattern: $SAN.$BYPASS($X)
+    - metavariable-regex:
+        metavariable: $BYPASS
+        regex: ^bypassSecurityTrust(Html|Script|Url|ResourceUrl|Style)$
+    - pattern-not: $SAN.$BYPASS("...")

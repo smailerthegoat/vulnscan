@@ -1,0 +1,779 @@
+# vulnscan curated taint rules: PHP (plain PHP, Laravel, Symfony, WordPress).
+# Registry packs (p/php, p/phpcs-security-audit) cover API misuse; these rules follow request data
+# (superglobals and framework request objects) into dangerous sinks. Tested by tests/rules/php.php.
+# Anchors are expanded on purpose: `semgrep --validate` does not resolve YAML aliases.
+rules:
+- id: vulnscan.php.sql-injection
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data is concatenated into SQL. Use prepared statements with bound parameters ($pdo->prepare('... WHERE id = ?')->execute([$id])).
+  metadata:
+    cwe:
+    - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command (''SQL Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: mysqli_query($C, $Q, ...)
+      - pattern: mysqli_multi_query($C, $Q)
+      - pattern: mysqli_real_query($C, $Q)
+      - pattern: mysql_query($Q, ...)
+      - pattern: pg_query($C, $Q)
+      - pattern: pg_query($Q)
+      - pattern: $DB->query($Q, ...)
+      - pattern: $DB->exec($Q)
+      - pattern: $DB->prepare($Q, ...)
+      - pattern: $DB->multi_query($Q)
+      - pattern: $DB->real_query($Q)
+      - pattern: $DB->executeQuery($Q, ...)
+      - pattern: $DB->executeStatement($Q, ...)
+      - pattern: $DB->createQuery($Q)
+      - pattern: $DB->get_results($Q, ...)
+      - pattern: $DB->get_row($Q, ...)
+      - pattern: $DB->get_var($Q, ...)
+      - pattern: $DB->get_col($Q, ...)
+      - pattern: DB::$M($Q, ...)
+      - pattern: $QB->whereRaw($Q, ...)
+      - pattern: $QB->orWhereRaw($Q, ...)
+      - pattern: $QB->havingRaw($Q, ...)
+      - pattern: $QB->orderByRaw($Q, ...)
+      - pattern: $QB->selectRaw($Q, ...)
+      - pattern: $QB->groupByRaw($Q, ...)
+      - pattern: $M::whereRaw($Q, ...)
+    - focus-metavariable: $Q
+  pattern-sanitizers:
+  - pattern: intval(...)
+  - pattern: floatval(...)
+  - pattern: (int)$X
+  - pattern: (float)$X
+  - pattern: mysqli_real_escape_string(...)
+  - pattern: $DB->real_escape_string(...)
+  - pattern: $DB->quote(...)
+  - pattern: $DB->prepare(...)
+  - pattern: esc_sql(...)
+  - pattern: pg_escape_string(...)
+- id: vulnscan.php.command-injection
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data reaches a shell command. Avoid the shell, or wrap every argument in escapeshellarg().
+  metadata:
+    cwe:
+    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS Command Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sanitizers:
+  - pattern: escapeshellarg(...)
+  - pattern: escapeshellcmd(...)
+  - pattern: intval(...)
+  - pattern: (int)$X
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: system($C, ...)
+      - pattern: exec($C, ...)
+      - pattern: shell_exec($C)
+      - pattern: passthru($C, ...)
+      - pattern: popen($C, $MODE)
+      - pattern: proc_open($C, ...)
+      - pattern: pcntl_exec($C, ...)
+    - focus-metavariable: $C
+  - pattern: '`...`'
+- id: vulnscan.php.code-injection
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data is evaluated as PHP code or selects the function to call.
+  metadata:
+    cwe:
+    - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: eval($X)
+      - pattern: assert($X, ...)
+      - pattern: create_function($ARGS, $X)
+      - pattern: call_user_func($X, ...)
+      - pattern: call_user_func_array($X, ...)
+    - focus-metavariable: $X
+- id: vulnscan.php.file-inclusion
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data selects a file to include (local/remote file inclusion, usually code execution).
+  metadata:
+    cwe:
+    - 'CWE-98: Improper Control of Filename for Include/Require Statement in PHP Program (''PHP Remote File Inclusion'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sanitizers:
+  - pattern: basename(...)
+  - pattern: intval(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: include $X;
+      - pattern: include_once $X;
+      - pattern: require $X;
+      - pattern: require_once $X;
+      - pattern: include($X);
+      - pattern: include_once($X);
+      - pattern: require($X);
+      - pattern: require_once($X);
+    - focus-metavariable: $X
+- id: vulnscan.php.path-traversal
+  mode: taint
+  languages:
+  - php
+  severity: WARNING
+  message: Request data is used as a file path (or URL for file_get_contents). Keep only basename() or check realpath() stays under the base directory.
+  metadata:
+    cwe:
+    - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path Traversal'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sanitizers:
+  - pattern: basename(...)
+  - pattern: intval(...)
+  - pattern: (int)$X
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $FN($P, ...)
+    - metavariable-regex:
+        metavariable: $FN
+        regex: ^(file_get_contents|file_put_contents|fopen|readfile|file|unlink|copy|rename|opendir|scandir|rmdir|mkdir|is_file|filesize|parse_ini_file|highlight_file|show_source)$
+    - pattern-not: file_get_contents('php://input')
+    - focus-metavariable: $P
+  - patterns:
+    - pattern-either:
+      - pattern: move_uploaded_file($TMP, $P)
+      - pattern: Storage::get($P)
+      - pattern: Storage::download($P, ...)
+      - pattern: Storage::delete($P)
+      - pattern: response()->download($P, ...)
+      - pattern: response()->file($P, ...)
+    - focus-metavariable: $P
+- id: vulnscan.php.ssrf
+  mode: taint
+  languages:
+  - php
+  severity: WARNING
+  message: Request data controls the destination of a server-side request. Allowlist hosts and block internal addresses after DNS resolution.
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sanitizers:
+  - patterns:
+    - pattern: '"$PFX" . $X'
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^https?://[^/]+/
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: curl_init($U)
+      - pattern: curl_setopt($CH, CURLOPT_URL, $U)
+      - pattern: fsockopen($U, ...)
+      - pattern: Http::$M($U, ...)
+      - pattern: $CLIENT->request($METHOD, $U, ...)
+      - pattern: wp_remote_get($U, ...)
+      - pattern: wp_remote_post($U, ...)
+    - focus-metavariable: $U
+- id: vulnscan.php.open-redirect
+  mode: taint
+  languages:
+  - php
+  severity: WARNING
+  message: Request data is used in a Location header or redirect (open redirect; with raw header() also header injection on old PHP).
+  metadata:
+    cwe:
+    - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: header($H, ...)
+      - pattern: redirect($H, ...)
+      - pattern: redirect()->to($H, ...)
+      - pattern: redirect()->away($H, ...)
+      - pattern: Redirect::to($H, ...)
+      - pattern: Redirect::away($H, ...)
+      - pattern: wp_redirect($H, ...)
+      - pattern: new RedirectResponse($H, ...)
+      - pattern: $this->redirect($H, ...)
+    - focus-metavariable: $H
+- id: vulnscan.php.xss
+  mode: taint
+  languages:
+  - php
+  severity: WARNING
+  message: Request data is echoed into HTML without htmlspecialchars().
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sanitizers:
+  - pattern: htmlspecialchars(...)
+  - pattern: htmlentities(...)
+  - pattern: strip_tags(...)
+  - pattern: esc_html(...)
+  - pattern: esc_attr(...)
+  - pattern: esc_url(...)
+  - pattern: e(...)
+  - pattern: urlencode(...)
+  - pattern: rawurlencode(...)
+  - pattern: intval(...)
+  - pattern: (int)$X
+  - pattern: (float)$X
+  pattern-sinks:
+  - pattern: echo ...;
+  - pattern: print(...);
+  - pattern: printf(...);
+  - pattern: die(...);
+  - pattern: exit(...);
+- id: vulnscan.php.unsafe-deserialization
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data is passed to unserialize() (PHP object injection). Use json_decode or allowed_classes => false.
+  metadata:
+    cwe:
+    - 'CWE-502: Deserialization of Untrusted Data'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: deserialization-config
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern: unserialize($X, ...)
+    - pattern-not: unserialize($X, ['allowed_classes' => false])
+    - pattern-not: unserialize($X, array('allowed_classes' => false))
+    - focus-metavariable: $X
+- id: vulnscan.php.xxe
+  mode: taint
+  languages:
+  - php
+  severity: ERROR
+  message: Request data is parsed as XML with external entities enabled (LIBXML_NOENT / LIBXML_DTDLOAD).
+  metadata:
+    cwe:
+    - 'CWE-611: Improper Restriction of XML External Entity Reference'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: simplexml_load_string($X, $CLASS, $FLAGS, ...)
+      - pattern: $DOM->loadXML($X, $FLAGS)
+    - metavariable-pattern:
+        metavariable: $FLAGS
+        pattern-regex: (LIBXML_NOENT|LIBXML_DTDLOAD)
+    - focus-metavariable: $X
+- id: vulnscan.php.variable-extraction
+  mode: taint
+  languages:
+  - php
+  severity: WARNING
+  message: extract()/parse_str() on request data lets the caller overwrite local variables (e.g. $is_admin).
+  metadata:
+    cwe:
+    - 'CWE-621: Variable Extraction Error'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: logic
+  pattern-sources:
+  - pattern: $_GET
+  - pattern: $_POST
+  - pattern: $_REQUEST
+  - pattern: $_COOKIE
+  - pattern: $_FILES
+  - patterns:
+    - pattern: $_SERVER[$KEY]
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (HTTP_|REQUEST_URI|QUERY_STRING|PHP_SELF|PATH_INFO|ORIG_PATH_INFO)
+  - pattern: file_get_contents('php://input')
+  - pattern: getallheaders()
+  - pattern: request(...)
+  - pattern: Input::get(...)
+  - pattern: Request::input(...)
+  - pattern: Request::get(...)
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ->input(...)
+      - pattern: $REQ->get(...)
+      - pattern: $REQ->query(...)
+      - pattern: $REQ->post(...)
+      - pattern: $REQ->all()
+      - pattern: $REQ->only(...)
+      - pattern: $REQ->except(...)
+      - pattern: $REQ->cookie(...)
+      - pattern: $REQ->header(...)
+      - pattern: $REQ->route(...)
+      - pattern: $REQ->file(...)
+      - pattern: $REQ->json(...)
+      - pattern: $REQ->getContent()
+      - pattern: $REQ->query->get(...)
+      - pattern: $REQ->query->all()
+      - pattern: $REQ->request->get(...)
+      - pattern: $REQ->request->all()
+      - pattern: $REQ->headers->get(...)
+      - pattern: $REQ->cookies->get(...)
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^\$?(request|req)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: extract($X, ...)
+      - pattern: parse_str($X)
+    - focus-metavariable: $X
+- id: vulnscan.php.mass-assignment
+  languages:
+  - php
+  severity: WARNING
+  message: All request fields are mass-assigned to a model; check $fillable/$guarded exclude role, owner and admin fields.
+  metadata:
+    cwe:
+    - 'CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes'
+    category: security
+    confidence: LOW
+    vulnscan-class: access-control
+  pattern-either:
+  - pattern: $M::create($REQ->all())
+  - pattern: $M::create(request()->all())
+  - pattern: $OBJ->fill($REQ->all())
+  - pattern: $OBJ->update($REQ->all())
+  - pattern: $M::forceCreate($REQ->$ANY(...))

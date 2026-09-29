@@ -1,0 +1,531 @@
+# vulnscan curated taint rules: Java / Kotlin-free Spring MVC and Servlet code.
+# Sources are the parameters of @*Mapping handler methods (Spring binds them from the request) and
+# HttpServletRequest accessors. Registry packs (p/java, p/findsecbugs) cover API misuse such as XXE
+# and weak crypto. Tested by tests/rules/java-spring.java (`semgrep --test`).
+# Anchors are expanded on purpose: `semgrep --validate` does not resolve YAML aliases.
+rules:
+- id: vulnscan.java.sql-injection
+  mode: taint
+  languages:
+  - java
+  severity: ERROR
+  message: Request data is concatenated into SQL/JPQL. Use bind parameters (PreparedStatement ?, :name, Criteria API).
+  metadata:
+    cwe:
+    - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command (''SQL Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sanitizers:
+  - pattern: Integer.parseInt(...)
+  - pattern: Integer.valueOf(...)
+  - pattern: Long.parseLong(...)
+  - pattern: Long.valueOf(...)
+  - pattern: UUID.fromString(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $S.executeQuery($Q)
+      - pattern: $S.executeUpdate($Q, ...)
+      - pattern: $S.executeLargeUpdate($Q, ...)
+      - pattern: $S.addBatch($Q)
+      - pattern: (Statement $S).execute($Q, ...)
+      - pattern: $C.prepareStatement($Q, ...)
+      - pattern: $C.prepareCall($Q, ...)
+      - pattern: $EM.createQuery($Q, ...)
+      - pattern: $EM.createNativeQuery($Q, ...)
+      - pattern: $EM.createSQLQuery($Q)
+      - pattern: $J.queryForObject($Q, ...)
+      - pattern: $J.queryForList($Q, ...)
+      - pattern: $J.queryForMap($Q, ...)
+      - pattern: $J.queryForRowSet($Q, ...)
+      - pattern: $J.batchUpdate($Q, ...)
+      - pattern: (JdbcTemplate $J).query($Q, ...)
+      - pattern: (JdbcTemplate $J).update($Q, ...)
+      - pattern: (JdbcTemplate $J).execute($Q, ...)
+      - pattern: (NamedParameterJdbcTemplate $J).query($Q, ...)
+      - pattern: (NamedParameterJdbcTemplate $J).update($Q, ...)
+    - focus-metavariable: $Q
+- id: vulnscan.java.command-injection
+  mode: taint
+  languages:
+  - java
+  severity: ERROR
+  message: Request data reaches a process command line. Use a fixed program with separate, validated arguments.
+  metadata:
+    cwe:
+    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS Command Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sanitizers:
+  - pattern: Integer.parseInt(...)
+  - pattern: Integer.valueOf(...)
+  - pattern: Long.parseLong(...)
+  - pattern: Long.valueOf(...)
+  - pattern: UUID.fromString(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: Runtime.getRuntime().exec($C, ...)
+      - pattern: (Runtime $R).exec($C, ...)
+      - pattern: new ProcessBuilder($C, ...)
+      - pattern: (ProcessBuilder $PB).command($C, ...)
+    - focus-metavariable: $C
+  - patterns:
+    - pattern: new ProcessBuilder("$SH", "$FLAG", $ARG, ...)
+    - metavariable-regex:
+        metavariable: $SH
+        regex: ^(/usr)?(/bin/)?(sh|bash|zsh|cmd|cmd\.exe|powershell|pwsh)$
+    - metavariable-regex:
+        metavariable: $FLAG
+        regex: ^(-c|/c|/C|-Command)$
+    - focus-metavariable: $ARG
+- id: vulnscan.java.path-traversal
+  mode: taint
+  languages:
+  - java
+  severity: WARNING
+  message: Request data is used as a file path. Keep only the file name (FilenameUtils.getName) or check the normalized path stays under the base directory.
+  metadata:
+    cwe:
+    - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path Traversal'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sanitizers:
+  - pattern: FilenameUtils.getName(...)
+  - pattern: $P.getFileName()
+  - pattern: Integer.parseInt(...)
+  - pattern: Long.parseLong(...)
+  - pattern: UUID.fromString(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: new File($P)
+      - pattern: new File($D, $P)
+      - pattern: new FileInputStream($P)
+      - pattern: new FileOutputStream($P, ...)
+      - pattern: new FileReader($P, ...)
+      - pattern: new FileWriter($P, ...)
+      - pattern: new RandomAccessFile($P, ...)
+      - pattern: Paths.get($P, ...)
+      - pattern: Paths.get($D, $P, ...)
+      - pattern: Path.of($P, ...)
+      - pattern: Path.of($D, $P, ...)
+      - pattern: (Path $BASE).resolve($P)
+      - pattern: new FileSystemResource($P)
+      - pattern: new ClassPathResource($P)
+    - focus-metavariable: $P
+- id: vulnscan.java.ssrf
+  mode: taint
+  languages:
+  - java
+  severity: WARNING
+  message: Request data controls the destination of a server-side request. Allowlist hosts and block internal addresses after DNS resolution.
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: '"$PFX" + $X'
+      - pattern: String.format("$PFX", ...)
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^https?://[^/%]+/
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $U.openConnection(...)
+      - pattern: $U.openStream()
+      - pattern: (RestTemplate $RT).getForObject($U, ...)
+      - pattern: (RestTemplate $RT).getForEntity($U, ...)
+      - pattern: (RestTemplate $RT).postForObject($U, ...)
+      - pattern: (RestTemplate $RT).postForEntity($U, ...)
+      - pattern: (RestTemplate $RT).exchange($U, ...)
+      - pattern: (RestTemplate $RT).put($U, ...)
+      - pattern: (RestTemplate $RT).delete($U, ...)
+      - pattern: $WC.get().uri($U, ...)
+      - pattern: $WC.post().uri($U, ...)
+      - pattern: HttpRequest.newBuilder($U)
+      - pattern: HttpRequest.newBuilder().uri($U)
+      - pattern: Jsoup.connect($U)
+      - pattern: new HttpGet($U)
+      - pattern: new HttpPost($U)
+    - focus-metavariable: $U
+- id: vulnscan.java.open-redirect
+  mode: taint
+  languages:
+  - java
+  severity: WARNING
+  message: Request data is used as a redirect target. Allow only relative paths or allowlisted hosts.
+  metadata:
+    cwe:
+    - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: (HttpServletResponse $RESP).sendRedirect($U)
+      - pattern: new RedirectView($U, ...)
+      - pattern: '"redirect:" + $U'
+    - focus-metavariable: $U
+- id: vulnscan.java.xss
+  mode: taint
+  languages:
+  - java
+  severity: WARNING
+  message: Request data is written into the HTTP response without HTML encoding.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sanitizers:
+  - pattern: HtmlUtils.htmlEscape(...)
+  - pattern: StringEscapeUtils.escapeHtml4(...)
+  - pattern: Encode.forHtml(...)
+  - pattern: Encode.forHtmlContent(...)
+  - pattern: ESAPI.encoder().encodeForHTML(...)
+  - pattern: Integer.parseInt(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: (HttpServletResponse $RESP).getWriter().$W($X, ...)
+      - pattern: (PrintWriter $PW).$W($X, ...)
+    - metavariable-regex:
+        metavariable: $W
+        regex: ^(write|print|println|printf|format|append)$
+    - focus-metavariable: $X
+- id: vulnscan.java.unsafe-deserialization
+  mode: taint
+  languages:
+  - java
+  severity: ERROR
+  message: Untrusted bytes are deserialized with a gadget-capable deserializer (possible RCE).
+  metadata:
+    cwe:
+    - 'CWE-502: Deserialization of Untrusted Data'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: deserialization-config
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: new ObjectInputStream($IN)
+      - pattern: new XMLDecoder($IN, ...)
+      - pattern: (XStream $XS).fromXML($IN, ...)
+      - pattern: (Yaml $Y).load($IN)
+      - pattern: new Yaml().load($IN)
+      - pattern: (Yaml $Y).loadAs($IN, ...)
+      - pattern: SerializationUtils.deserialize($IN)
+    - focus-metavariable: $IN
+- id: vulnscan.java.expression-injection
+  mode: taint
+  languages:
+  - java
+  severity: ERROR
+  message: Request data is evaluated as a SpEL/OGNL/template expression (code execution).
+  metadata:
+    cwe:
+    - 'CWE-917: Improper Neutralization of Special Elements used in an Expression Language Statement (''Expression Language Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $PARSER.parseExpression($E, ...)
+      - pattern: Ognl.getValue($E, ...)
+      - pattern: Ognl.parseExpression($E)
+      - pattern: Velocity.evaluate($CTX, $W, $TAG, $E)
+      - pattern: (VelocityEngine $VE).evaluate($CTX, $W, $TAG, $E)
+      - pattern: new Template($NAME, new StringReader($E), ...)
+    - focus-metavariable: $E
+- id: vulnscan.java.view-name-injection
+  mode: taint
+  languages:
+  - java
+  severity: WARNING
+  message: A @Controller returns a view name built from request data; with Thymeleaf this allows expression preprocessing (__${...}__), i.e. code execution.
+  metadata:
+    cwe:
+    - 'CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine'
+    category: security
+    confidence: LOW
+    vulnscan-class: injection
+  options:
+    taint_assume_safe_numbers: true
+    taint_assume_safe_booleans: true
+  pattern-sources:
+  - patterns:
+    - pattern-inside: '@$MAPPING(...)
+
+        $RET $METHOD(..., $TYPE $PARAM, ...) { ... }
+
+        '
+    - metavariable-regex:
+        metavariable: $MAPPING
+        regex: ^(Get|Post|Put|Delete|Patch|Request)Mapping$
+    - metavariable-regex:
+        metavariable: $TYPE
+        regex: ^(?!(Principal|Authentication|Model|ModelMap|ModelAndView|HttpServletResponse|BindingResult|Errors|Locale|HttpSession|RedirectAttributes|SessionStatus|UriComponentsBuilder|Pageable|Sort)$)
+    - pattern: $PARAM
+  - pattern: (HttpServletRequest $REQ).getParameter(...)
+  - pattern: (HttpServletRequest $REQ).getParameterValues(...)
+  - pattern: (HttpServletRequest $REQ).getParameterMap()
+  - pattern: (HttpServletRequest $REQ).getHeader(...)
+  - pattern: (HttpServletRequest $REQ).getQueryString()
+  - pattern: (HttpServletRequest $REQ).getPathInfo()
+  - pattern: (HttpServletRequest $REQ).getRequestURI()
+  - pattern: (HttpServletRequest $REQ).getCookies()
+  - pattern: (HttpServletRequest $REQ).getInputStream()
+  - pattern: (HttpServletRequest $REQ).getReader()
+  - pattern: (HttpServletRequest $REQ).getPart(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-inside: '@Controller
+
+        class $CLASS { ... }
+
+        '
+    - pattern-inside: '@$MAPPING(...)
+
+        String $METHOD(...) { ... }
+
+        '
+    - pattern: return $VIEW;
+    - pattern-not: return "redirect:" + $X;
+    - pattern-not: return "forward:" + $X;
+    - focus-metavariable: $VIEW

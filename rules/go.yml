@@ -1,0 +1,508 @@
+# vulnscan curated taint rules: Go (net/http, gorilla/mux, chi, gin, echo, fiber).
+# Registry packs (p/golang, p/gosec) cover API misuse; these rules follow request data from the
+# common routers into dangerous sinks. Tested by tests/rules/go.go (`semgrep --test`).
+# Anchors are expanded on purpose: `semgrep --validate` does not resolve YAML aliases.
+rules:
+- id: vulnscan.go.sql-injection
+  mode: taint
+  languages:
+  - go
+  severity: ERROR
+  message: Request data reaches a SQL query string. Use placeholders (db.Query("... WHERE id = ?", id)).
+  metadata:
+    cwe:
+    - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command (''SQL Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - pattern: strconv.Atoi(...)
+  - pattern: strconv.ParseInt(...)
+  - pattern: strconv.ParseUint(...)
+  - pattern: strconv.ParseFloat(...)
+  - pattern: strconv.ParseBool(...)
+  - pattern: uuid.Parse(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $DB.Query($Q, ...)
+      - pattern: $DB.QueryRow($Q, ...)
+      - pattern: $DB.Exec($Q, ...)
+      - pattern: $DB.QueryContext($CTX, $Q, ...)
+      - pattern: $DB.QueryRowContext($CTX, $Q, ...)
+      - pattern: $DB.ExecContext($CTX, $Q, ...)
+      - pattern: $DB.Prepare($Q)
+      - pattern: $DB.PrepareContext($CTX, $Q)
+      - pattern: $DB.Select($DEST, $Q, ...)
+      - pattern: $DB.Get($DEST, $Q, ...)
+      - pattern: $DB.Raw($Q, ...)
+      - pattern: $DB.Where($Q, ...)
+      - pattern: $DB.Order($Q)
+      - pattern: $DB.Group($Q)
+      - pattern: $DB.Having($Q, ...)
+      - pattern: $DB.Joins($Q, ...)
+    - pattern-not: '($C : *gin.Context).$M(...)'
+    - pattern-not: '($C : echo.Context).$M(...)'
+    - pattern-not: '($C : *fiber.Ctx).$M(...)'
+    - pattern-not: '($C : *http.Request).$M(...)'
+    - pattern-not: $DB.Where(&$S{...}, ...)
+    - pattern-not: $DB.Where($S{...}, ...)
+    - pattern-not: $DB.Where(map[$K]$V{...}, ...)
+    - focus-metavariable: $Q
+- id: vulnscan.go.command-injection
+  mode: taint
+  languages:
+  - go
+  severity: ERROR
+  message: Request data chooses the program or reaches a shell command line. Use a fixed program and pass input as separate arguments.
+  metadata:
+    cwe:
+    - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command (''OS Command Injection'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - pattern: strconv.Atoi(...)
+  - pattern: strconv.ParseInt(...)
+  - pattern: strconv.ParseUint(...)
+  - pattern: strconv.ParseFloat(...)
+  - pattern: strconv.ParseBool(...)
+  - pattern: uuid.Parse(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: exec.Command($CMD, ...)
+      - pattern: exec.CommandContext($CTX, $CMD, ...)
+      - pattern: syscall.Exec($CMD, ...)
+    - focus-metavariable: $CMD
+  - patterns:
+    - pattern-either:
+      - pattern: exec.Command("$SH", "$FLAG", $ARG, ...)
+      - pattern: exec.CommandContext($CTX, "$SH", "$FLAG", $ARG, ...)
+    - metavariable-regex:
+        metavariable: $SH
+        regex: ^(/usr)?(/bin/)?(sh|bash|zsh|dash|ksh|cmd|cmd\.exe|powershell|powershell\.exe|pwsh)$
+    - metavariable-regex:
+        metavariable: $FLAG
+        regex: ^(-c|/c|/C|-Command)$
+    - focus-metavariable: $ARG
+- id: vulnscan.go.path-traversal
+  mode: taint
+  languages:
+  - go
+  severity: WARNING
+  message: Request data is used as a file path. Reduce it with filepath.Base or check the cleaned path stays under the base directory.
+  metadata:
+    cwe:
+    - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path Traversal'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - pattern: filepath.Base(...)
+  - pattern: path.Base(...)
+  - pattern: filepath.Clean("/" + $X)
+  - pattern: path.Clean("/" + $X)
+  - pattern: strconv.Atoi(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: os.Open($P)
+      - pattern: os.OpenFile($P, ...)
+      - pattern: os.ReadFile($P)
+      - pattern: ioutil.ReadFile($P)
+      - pattern: os.Create($P)
+      - pattern: os.WriteFile($P, ...)
+      - pattern: ioutil.WriteFile($P, ...)
+      - pattern: os.Remove($P)
+      - pattern: os.RemoveAll($P)
+      - pattern: os.ReadDir($P)
+      - pattern: http.ServeFile($W, $REQ, $P)
+      - pattern: $C.File($P)
+      - pattern: $C.SendFile($P, ...)
+      - pattern: $C.FileAttachment($P, ...)
+    - focus-metavariable: $P
+- id: vulnscan.go.ssrf
+  mode: taint
+  languages:
+  - go
+  severity: WARNING
+  message: Request data controls the destination of a server-side HTTP request. Allowlist hosts and block internal addresses after DNS resolution.
+  metadata:
+    cwe:
+    - 'CWE-918: Server-Side Request Forgery (SSRF)'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: '"$PFX" + $X'
+      - pattern: fmt.Sprintf("$PFX", ...)
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^https?://[^/%]+/
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: http.Get($U)
+      - pattern: http.Head($U)
+      - pattern: http.Post($U, ...)
+      - pattern: http.PostForm($U, ...)
+      - pattern: http.NewRequest($M, $U, ...)
+      - pattern: http.NewRequestWithContext($CTX, $M, $U, ...)
+      - pattern: '($CL : *http.Client).Get($U)'
+      - pattern: '($CL : *http.Client).Head($U)'
+      - pattern: '($CL : *http.Client).Post($U, ...)'
+      - pattern: net.Dial($NET, $U)
+    - focus-metavariable: $U
+- id: vulnscan.go.open-redirect
+  mode: taint
+  languages:
+  - go
+  severity: WARNING
+  message: Request data is used as a redirect target. Allow only relative paths ("/x", not "//host") or allowlisted hosts.
+  metadata:
+    cwe:
+    - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: '"$PFX" + $X'
+      - pattern: fmt.Sprintf("$PFX", ...)
+    - metavariable-regex:
+        metavariable: $PFX
+        regex: ^(/[^/\\]|https?://[^/%]+/)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: http.Redirect($W, $REQ, $U, ...)
+      - pattern: '($C : *gin.Context).Redirect($CODE, $U)'
+      - pattern: '($C : echo.Context).Redirect($CODE, $U)'
+      - pattern: '($C : *fiber.Ctx).Redirect($U, ...)'
+    - focus-metavariable: $U
+- id: vulnscan.go.xss
+  mode: taint
+  languages:
+  - go
+  severity: WARNING
+  message: Request data is written into an HTML response without escaping (net/http sniffs text/html), or marked safe with template.HTML.
+  metadata:
+    cwe:
+    - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site Scripting'')'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: web
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sanitizers:
+  - pattern: html.EscapeString(...)
+  - pattern: template.HTMLEscapeString(...)
+  - pattern: template.JSEscapeString(...)
+  - pattern: url.QueryEscape(...)
+  - pattern: url.PathEscape(...)
+  - pattern: strconv.Atoi(...)
+  - pattern: json.Marshal(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: template.HTML($X)
+      - pattern: template.JS($X)
+      - pattern: template.URL($X)
+      - pattern: template.HTMLAttr($X)
+      - pattern: template.CSS($X)
+    - focus-metavariable: $X
+  - patterns:
+    - pattern-either:
+      - pattern: 'fmt.Fprintf(($W : http.ResponseWriter), $F, ...)'
+      - pattern: 'fmt.Fprint(($W : http.ResponseWriter), ...)'
+      - pattern: 'fmt.Fprintln(($W : http.ResponseWriter), ...)'
+      - pattern: 'io.WriteString(($W : http.ResponseWriter), $X)'
+      - pattern: '($W : http.ResponseWriter).Write($X)'
+      - pattern: '($C : *gin.Context).Data($CODE, "text/html", $X)'
+      - pattern: '($C : echo.Context).HTML($CODE, $X)'
+- id: vulnscan.go.template-injection
+  mode: taint
+  languages:
+  - go
+  severity: WARNING
+  message: Request data is parsed as a Go template (server-side template injection).
+  metadata:
+    cwe:
+    - 'CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine'
+    category: security
+    confidence: MEDIUM
+    vulnscan-class: injection
+  pattern-sources:
+  - pattern: '($R : *http.Request).FormValue(...)'
+  - pattern: '($R : *http.Request).PostFormValue(...)'
+  - pattern: '($R : *http.Request).PathValue(...)'
+  - pattern: '($R : *http.Request).URL.Query()'
+  - pattern: '($R : *http.Request).URL.RawQuery'
+  - pattern: '($R : *http.Request).URL.Path'
+  - pattern: '($R : *http.Request).Form'
+  - pattern: '($R : *http.Request).PostForm'
+  - pattern: '($R : *http.Request).Header'
+  - pattern: '($R : *http.Request).Body'
+  - pattern: '($R : *http.Request).Cookie(...)'
+  - pattern: mux.Vars(...)
+  - pattern: chi.URLParam(...)
+  - pattern: '($C : *gin.Context).Query(...)'
+  - pattern: '($C : *gin.Context).DefaultQuery(...)'
+  - pattern: '($C : *gin.Context).Param(...)'
+  - pattern: '($C : *gin.Context).PostForm(...)'
+  - pattern: '($C : *gin.Context).DefaultPostForm(...)'
+  - pattern: '($C : *gin.Context).GetHeader(...)'
+  - pattern: '($C : *gin.Context).Cookie(...)'
+  - pattern: '($C : echo.Context).QueryParam(...)'
+  - pattern: '($C : echo.Context).Param(...)'
+  - pattern: '($C : echo.Context).FormValue(...)'
+  - pattern: '($C : *fiber.Ctx).Query(...)'
+  - pattern: '($C : *fiber.Ctx).Params(...)'
+  - pattern: '($C : *fiber.Ctx).FormValue(...)'
+  - patterns:
+    - pattern-either:
+      - pattern: $C.ShouldBind(&$X)
+      - pattern: $C.ShouldBindJSON(&$X)
+      - pattern: $C.ShouldBindQuery(&$X)
+      - pattern: $C.BindJSON(&$X)
+      - pattern: $C.Bind(&$X)
+      - pattern: $C.BodyParser(&$X)
+      - pattern: json.NewDecoder($R.Body).Decode(&$X)
+    - focus-metavariable: $X
+    by-side-effect: true
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: template.New($N).Parse($X)
+      - pattern: '($T : *template.Template).Parse($X)'
+    - focus-metavariable: $X
