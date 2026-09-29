@@ -1,0 +1,1130 @@
+{
+  "generated_utc": "2026-09-29T13:40:03Z",
+  "strict": false,
+  "as_published": false,
+  "bootstrap": 2000,
+  "seed": 1,
+  "views": {
+    "semgrep": {
+      "label": "Plain Semgrep",
+      "repos_scored": 8,
+      "repos_total": 8,
+      "tp": 36,
+      "fp": 108,
+      "fn": 164,
+      "tn": 23,
+      "precision": 0.25,
+      "recall": 0.18,
+      "f1": 0.20930232558139533,
+      "f2": 0.1906779661016949,
+      "f3": 0.18518518518518515,
+      "fpr": 0.8244274809160306,
+      "wf3": 0.19730755159234784,
+      "macro_f3": 0.16612224673029197,
+      "ci95": {
+        "precision": [
+          0.1532258064516129,
+          0.3669064748201439
+        ],
+        "recall": [
+          0.07881773399014778,
+          0.2585034013605442
+        ],
+        "f3": [
+          0.08450704225352113,
+          0.2586605080831409
+        ]
+      },
+      "per_class_recall": {
+        "auth_endpoint_brute_force_exposure": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "broken_access_control": {
+          "tp": 0,
+          "total": 6,
+          "recall": 0.0
+        },
+        "broken_authentication": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "broken_object_level_authorization": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "brute_force": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "cleartext_credential_transmission": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "code_injection": {
+          "tp": 1,
+          "total": 2,
+          "recall": 0.5
+        },
+        "command_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "cookie_cleartext_transport_exposure": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "cross_site_scripting": {
+          "tp": 3,
+          "total": 11,
+          "recall": 0.2727272727272727
+        },
+        "csrf": {
+          "tp": 6,
+          "total": 13,
+          "recall": 0.46153846153846156
+        },
+        "denial_of_service": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "dom_xss": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "hardcoded_credential": {
+          "tp": 2,
+          "total": 4,
+          "recall": 0.5
+        },
+        "hardcoded_credentials": {
+          "tp": 1,
+          "total": 18,
+          "recall": 0.05555555555555555
+        },
+        "hardcoded_cryptographic_key": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "http_header_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "http_parameter_pollution": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "idor": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "insecure_cookie": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "insecure_deserialization": {
+          "tp": 1,
+          "total": 2,
+          "recall": 0.5
+        },
+        "insecure_randomness": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "insecure_session": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "internal_error_disclosure_via_http": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "log_injection": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "mass_assignment": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "missing_authentication": {
+          "tp": 0,
+          "total": 4,
+          "recall": 0.0
+        },
+        "missing_authorization": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "missing_rate_limiting": {
+          "tp": 0,
+          "total": 6,
+          "recall": 0.0
+        },
+        "missing_security_event_logging": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "observable_response_discrepancy": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "open_redirect": {
+          "tp": 3,
+          "total": 4,
+          "recall": 0.75
+        },
+        "os_command_injection": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "password_complexity_bypass": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "path_traversal": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "plaintext_password_storage": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "plaintext_sensitive_storage": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "predictable_security_token": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "reflected_xss": {
+          "tp": 0,
+          "total": 8,
+          "recall": 0.0
+        },
+        "remote_file_inclusion": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "security_misconfiguration": {
+          "tp": 5,
+          "total": 8,
+          "recall": 0.625
+        },
+        "sensitive_data_exposure": {
+          "tp": 0,
+          "total": 28,
+          "recall": 0.0
+        },
+        "session_fixation": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "sql_injection": {
+          "tp": 8,
+          "total": 13,
+          "recall": 0.6153846153846154
+        },
+        "ssrf": {
+          "tp": 1,
+          "total": 2,
+          "recall": 0.5
+        },
+        "ssti": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "stored_xss": {
+          "tp": 0,
+          "total": 8,
+          "recall": 0.0
+        },
+        "uncontrolled_resource_consumption": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "unsafe_deserialization": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "user_enumeration": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_cryptography": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "weak_hash": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_password_hashing": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_prng": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "xpath_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "xxe": {
+          "tp": 1,
+          "total": 3,
+          "recall": 0.3333333333333333
+        }
+      }
+    },
+    "vulnscan-leads": {
+      "label": "vulnscan scanner leads (no LLM)",
+      "repos_scored": 8,
+      "repos_total": 8,
+      "tp": 56,
+      "fp": 166,
+      "fn": 144,
+      "tn": 20,
+      "precision": 0.25225225225225223,
+      "recall": 0.28,
+      "f1": 0.26540284360189575,
+      "f2": 0.27397260273972607,
+      "f3": 0.2769535113748764,
+      "fpr": 0.8924731182795699,
+      "wf3": 0.3068400243784282,
+      "macro_f3": 0.25022904684620817,
+      "ci95": {
+        "precision": [
+          0.17857142857142858,
+          0.32954545454545453
+        ],
+        "recall": [
+          0.2,
+          0.3333333333333333
+        ],
+        "f3": [
+          0.19972451790633608,
+          0.32944120100083396
+        ]
+      },
+      "per_class_recall": {
+        "auth_endpoint_brute_force_exposure": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "broken_access_control": {
+          "tp": 0,
+          "total": 6,
+          "recall": 0.0
+        },
+        "broken_authentication": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "broken_object_level_authorization": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "brute_force": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "cleartext_credential_transmission": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "code_injection": {
+          "tp": 1,
+          "total": 2,
+          "recall": 0.5
+        },
+        "command_injection": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "cookie_cleartext_transport_exposure": {
+          "tp": 2,
+          "total": 2,
+          "recall": 1.0
+        },
+        "cross_site_scripting": {
+          "tp": 4,
+          "total": 11,
+          "recall": 0.36363636363636365
+        },
+        "csrf": {
+          "tp": 6,
+          "total": 13,
+          "recall": 0.46153846153846156
+        },
+        "denial_of_service": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "dom_xss": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "hardcoded_credential": {
+          "tp": 2,
+          "total": 4,
+          "recall": 0.5
+        },
+        "hardcoded_credentials": {
+          "tp": 1,
+          "total": 18,
+          "recall": 0.05555555555555555
+        },
+        "hardcoded_cryptographic_key": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "http_header_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "http_parameter_pollution": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "idor": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "insecure_cookie": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "insecure_deserialization": {
+          "tp": 2,
+          "total": 2,
+          "recall": 1.0
+        },
+        "insecure_randomness": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "insecure_session": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "internal_error_disclosure_via_http": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "log_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "mass_assignment": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "missing_authentication": {
+          "tp": 0,
+          "total": 4,
+          "recall": 0.0
+        },
+        "missing_authorization": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "missing_rate_limiting": {
+          "tp": 0,
+          "total": 6,
+          "recall": 0.0
+        },
+        "missing_security_event_logging": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "observable_response_discrepancy": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "open_redirect": {
+          "tp": 3,
+          "total": 4,
+          "recall": 0.75
+        },
+        "os_command_injection": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "password_complexity_bypass": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "path_traversal": {
+          "tp": 1,
+          "total": 3,
+          "recall": 0.3333333333333333
+        },
+        "plaintext_password_storage": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "plaintext_sensitive_storage": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "predictable_security_token": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "reflected_xss": {
+          "tp": 4,
+          "total": 8,
+          "recall": 0.5
+        },
+        "remote_file_inclusion": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "security_misconfiguration": {
+          "tp": 5,
+          "total": 8,
+          "recall": 0.625
+        },
+        "sensitive_data_exposure": {
+          "tp": 0,
+          "total": 28,
+          "recall": 0.0
+        },
+        "session_fixation": {
+          "tp": 0,
+          "total": 2,
+          "recall": 0.0
+        },
+        "sql_injection": {
+          "tp": 11,
+          "total": 13,
+          "recall": 0.8461538461538461
+        },
+        "ssrf": {
+          "tp": 1,
+          "total": 2,
+          "recall": 0.5
+        },
+        "ssti": {
+          "tp": 2,
+          "total": 2,
+          "recall": 1.0
+        },
+        "stored_xss": {
+          "tp": 5,
+          "total": 8,
+          "recall": 0.625
+        },
+        "uncontrolled_resource_consumption": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "unsafe_deserialization": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "user_enumeration": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_cryptography": {
+          "tp": 1,
+          "total": 1,
+          "recall": 1.0
+        },
+        "weak_hash": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_password_hashing": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "weak_prng": {
+          "tp": 0,
+          "total": 3,
+          "recall": 0.0
+        },
+        "xpath_injection": {
+          "tp": 0,
+          "total": 1,
+          "recall": 0.0
+        },
+        "xxe": {
+          "tp": 1,
+          "total": 3,
+          "recall": 0.3333333333333333
+        }
+      }
+    }
+  },
+  "pairs": [
+    {
+      "a": "vulnscan-leads",
+      "b": "semgrep",
+      "repos": 8,
+      "mean_delta_f3": 0.08410680011591617,
+      "ci95": [
+        0.03357251901709769,
+        0.14994201322707174
+      ],
+      "wins": 7,
+      "ties": 1,
+      "losses": 0,
+      "sign_test_p": 0.015625
+    }
+  ],
+  "per_repo": [
+    {
+      "target": "realvuln-dsvw",
+      "format": "realvuln",
+      "vulns": 27,
+      "traps": 4,
+      "gt_sha256": "3e9cf36a55c6d0fe57b2d0bbe8575a1ad23ae34b8ca0c61c345b4ada3c998c95",
+      "views": {
+        "semgrep": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 27,
+          "tn": 4,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "f2": 0.0,
+          "f3": 0.0,
+          "fpr": 0.0,
+          "w_tp": 0.0,
+          "w_fp": 0.0,
+          "w_fn": 169.1,
+          "wf3": 0.0,
+          "findings": 0
+        },
+        "vulnscan-leads": {
+          "tp": 7,
+          "fp": 9,
+          "fn": 20,
+          "tn": 4,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.4375,
+          "recall": 0.25925925925925924,
+          "f1": 0.3255813953488372,
+          "f2": 0.28225806451612906,
+          "f3": 0.2702702702702703,
+          "fpr": 0.6923076923076923,
+          "w_tp": 58.8,
+          "w_fp": 52.0,
+          "w_fn": 110.29999999999998,
+          "wf3": 0.36013964598517795,
+          "findings": 16
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-dsvw/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-dvna",
+      "format": "realvuln",
+      "vulns": 17,
+      "traps": 0,
+      "gt_sha256": "bde1b486409a6030a3400776d67baf44140d5dc8e188d9ac64b8bf5706b71383",
+      "views": {
+        "semgrep": {
+          "tp": 7,
+          "fp": 20,
+          "fn": 10,
+          "tn": 0,
+          "dups": 7,
+          "ns": 0,
+          "precision": 0.25925925925925924,
+          "recall": 0.4117647058823529,
+          "f1": 0.3181818181818182,
+          "f2": 0.3684210526315789,
+          "f3": 0.3888888888888889,
+          "fpr": 1.0,
+          "w_tp": 47.3,
+          "w_fp": 128.02352941176474,
+          "w_fn": 66.8,
+          "wf3": 0.39343764984489527,
+          "findings": 27
+        },
+        "vulnscan-leads": {
+          "tp": 8,
+          "fp": 20,
+          "fn": 9,
+          "tn": 0,
+          "dups": 5,
+          "ns": 0,
+          "precision": 0.2857142857142857,
+          "recall": 0.47058823529411764,
+          "f1": 0.35555555555555557,
+          "f2": 0.41666666666666663,
+          "f3": 0.4419889502762431,
+          "fpr": 1.0,
+          "w_tp": 54.699999999999996,
+          "w_fp": 115.0,
+          "w_fn": 59.4,
+          "wf3": 0.45712853083737254,
+          "findings": 28
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-dvna/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-flask-xss",
+      "format": "realvuln",
+      "vulns": 30,
+      "traps": 5,
+      "gt_sha256": "7c89909d7d96a24db10149339e8df8894cd16b02ea0cd5fdd9b65427adcfee8d",
+      "views": {
+        "semgrep": {
+          "tp": 3,
+          "fp": 1,
+          "fn": 27,
+          "tn": 5,
+          "dups": 1,
+          "ns": 0,
+          "precision": 0.75,
+          "recall": 0.1,
+          "f1": 0.17647058823529416,
+          "f2": 0.12096774193548386,
+          "f3": 0.10948905109489052,
+          "fpr": 0.16666666666666666,
+          "w_tp": 22.2,
+          "w_fp": 5.177142857142857,
+          "w_fn": 159.00000000000003,
+          "wf3": 0.13388195643408768,
+          "findings": 4
+        },
+        "vulnscan-leads": {
+          "tp": 8,
+          "fp": 12,
+          "fn": 22,
+          "tn": 4,
+          "dups": 3,
+          "ns": 0,
+          "precision": 0.4,
+          "recall": 0.26666666666666666,
+          "f1": 0.32,
+          "f2": 0.2857142857142857,
+          "f3": 0.27586206896551724,
+          "fpr": 0.75,
+          "w_tp": 56.2,
+          "w_fp": 66.0,
+          "w_fn": 124.99999999999999,
+          "wf3": 0.32059326868225896,
+          "findings": 20
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-flask-xss/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-nodegoat",
+      "format": "realvuln",
+      "vulns": 28,
+      "traps": 0,
+      "gt_sha256": "34b7d611d1036bd7c4ea2dd6c98373d620e13ba3d5d38689e65299a37b49709c",
+      "views": {
+        "semgrep": {
+          "tp": 6,
+          "fp": 42,
+          "fn": 22,
+          "tn": 0,
+          "dups": 5,
+          "ns": 0,
+          "precision": 0.125,
+          "recall": 0.21428571428571427,
+          "f1": 0.15789473684210525,
+          "f2": 0.1875,
+          "f3": 0.2,
+          "fpr": 1.0,
+          "w_tp": 42.9,
+          "w_fp": 265.0607142857145,
+          "w_fn": 133.4,
+          "wf3": 0.22642576413040402,
+          "findings": 48
+        },
+        "vulnscan-leads": {
+          "tp": 7,
+          "fp": 39,
+          "fn": 21,
+          "tn": 0,
+          "dups": 4,
+          "ns": 0,
+          "precision": 0.15217391304347827,
+          "recall": 0.25,
+          "f1": 0.1891891891891892,
+          "f2": 0.22151898734177217,
+          "f3": 0.2348993288590604,
+          "fpr": 1.0,
+          "w_tp": 48.1,
+          "w_fp": 229.5,
+          "w_fn": 128.2,
+          "wf3": 0.2580056857801856,
+          "findings": 46
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-nodegoat/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-vampi",
+      "format": "realvuln",
+      "vulns": 15,
+      "traps": 4,
+      "gt_sha256": "9dd52ceebff72a7cbb027051e5d17433efa9cf40bee6889e824839606dba3bab",
+      "views": {
+        "semgrep": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 15,
+          "tn": 4,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "f2": 0.0,
+          "f3": 0.0,
+          "fpr": 0.0,
+          "w_tp": 0.0,
+          "w_fp": 0.0,
+          "w_fn": 105.79999999999998,
+          "wf3": 0.0,
+          "findings": 0
+        },
+        "vulnscan-leads": {
+          "tp": 0,
+          "fp": 9,
+          "fn": 15,
+          "tn": 4,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "f2": 0.0,
+          "f3": 0.0,
+          "fpr": 0.6923076923076923,
+          "w_tp": 0.0,
+          "w_fp": 59.5,
+          "w_fn": 105.79999999999998,
+          "wf3": 0.0,
+          "findings": 9
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-vampi/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-vuln-node-express",
+      "format": "realvuln",
+      "vulns": 5,
+      "traps": 0,
+      "gt_sha256": "136858f739d98b09c29d382b8f23157e8a96a9bf94af794d9fa0c72d29873d1c",
+      "views": {
+        "semgrep": {
+          "tp": 1,
+          "fp": 5,
+          "fn": 4,
+          "tn": 0,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.16666666666666666,
+          "recall": 0.2,
+          "f1": 0.1818181818181818,
+          "f2": 0.1923076923076923,
+          "f3": 0.19607843137254902,
+          "fpr": 1.0,
+          "w_tp": 5.4,
+          "w_fp": 14.540000000000001,
+          "w_fn": 27.2,
+          "wf3": 0.17233675879236615,
+          "findings": 6
+        },
+        "vulnscan-leads": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 4,
+          "tn": 0,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.3333333333333333,
+          "recall": 0.2,
+          "f1": 0.25,
+          "f2": 0.21739130434782608,
+          "f3": 0.20833333333333331,
+          "fpr": 1.0,
+          "w_tp": 5.4,
+          "w_fp": 13.5,
+          "w_fn": 27.2,
+          "wf3": 0.17291066282420753,
+          "findings": 3
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-vuln-node-express/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-vulnerable-flask-app",
+      "format": "realvuln",
+      "vulns": 21,
+      "traps": 4,
+      "gt_sha256": "ac03b4effd33b8e6f9f6158013203224abc6358049c9758cf85fdc5f5ec6fdef",
+      "views": {
+        "semgrep": {
+          "tp": 3,
+          "fp": 11,
+          "fn": 18,
+          "tn": 4,
+          "dups": 1,
+          "ns": 0,
+          "precision": 0.21428571428571427,
+          "recall": 0.14285714285714285,
+          "f1": 0.17142857142857143,
+          "f2": 0.1530612244897959,
+          "f3": 0.14778325123152708,
+          "fpr": 0.7333333333333333,
+          "w_tp": 23.0,
+          "w_fp": 63.623999999999995,
+          "w_fn": 121.60000000000001,
+          "wf3": 0.1657031866884146,
+          "findings": 14
+        },
+        "vulnscan-leads": {
+          "tp": 5,
+          "fp": 27,
+          "fn": 16,
+          "tn": 3,
+          "dups": 3,
+          "ns": 0,
+          "precision": 0.15625,
+          "recall": 0.23809523809523808,
+          "f1": 0.18867924528301888,
+          "f2": 0.2155172413793103,
+          "f3": 0.2262443438914027,
+          "fpr": 0.9,
+          "w_tp": 42.9,
+          "w_fp": 168.5,
+          "w_fn": 101.7,
+          "wf3": 0.2835801163405605,
+          "findings": 32
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-vulnerable-flask-app/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    },
+    {
+      "target": "realvuln-vulpy",
+      "format": "realvuln",
+      "vulns": 57,
+      "traps": 6,
+      "gt_sha256": "8b6dd0b06cb307b1c5d1b115e8f30bb31ae8e0534b955988e854547c4a7c7ba5",
+      "views": {
+        "semgrep": {
+          "tp": 16,
+          "fp": 29,
+          "fn": 41,
+          "tn": 6,
+          "dups": 6,
+          "ns": 0,
+          "precision": 0.35555555555555557,
+          "recall": 0.2807017543859649,
+          "f1": 0.31372549019607837,
+          "f2": 0.29304029304029305,
+          "f3": 0.2867383512544803,
+          "fpr": 0.8285714285714286,
+          "w_tp": 101.59999999999997,
+          "w_fp": 159.06349206349208,
+          "w_fn": 242.20000000000016,
+          "wf3": 0.3028439167207615,
+          "findings": 45
+        },
+        "vulnscan-leads": {
+          "tp": 20,
+          "fp": 48,
+          "fn": 37,
+          "tn": 5,
+          "dups": 0,
+          "ns": 0,
+          "precision": 0.29411764705882354,
+          "recall": 0.3508771929824561,
+          "f1": 0.31999999999999995,
+          "f2": 0.3378378378378379,
+          "f3": 0.34423407917383825,
+          "fpr": 0.9056603773584906,
+          "w_tp": 126.59999999999998,
+          "w_fp": 294.0,
+          "w_fn": 217.20000000000013,
+          "wf3": 0.36019119153294626,
+          "findings": 68
+        },
+        "vulnscan-raw": null,
+        "vulnscan": null
+      },
+      "baseline": {
+        "source": "RealVuln published Semgrep results",
+        "file": "eval/cache/realvuln/7a710251f55c/realvuln-vulpy/semgrep.json",
+        "suite_commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+        "created_utc": "2026-09-28T12:23:37Z"
+      },
+      "note": null
+    }
+  ],
+  "provenance": {
+    "vulnscan_version": "0.3.0",
+    "python": "3.12.3",
+    "agent_models": {
+      "vuln-discloser": "opus",
+      "vuln-hunter": "sonnet",
+      "vuln-patcher": "sonnet",
+      "vuln-reach": "sonnet",
+      "vuln-recon": "sonnet",
+      "vuln-validator": "opus"
+    },
+    "curated_rules_sha256": "e0998a0096fe995938ff7c767e856563ea7bbf0a4d64a7cb142796644380d397",
+    "ground_truth_sha256": "2c6032b9c4d16d3620010c9e7389eb91478178700c86ea2cc4d78418bc3e4995",
+    "baselines": [
+      "RealVuln published Semgrep results"
+    ],
+    "suite": {
+      "benchmark": "RealVuln",
+      "repo": "https://github.com/kolega-ai/Real-Vuln-Benchmark",
+      "ref": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+      "commit": "7a710251f55c17d32d3adcb13d37468e2e3b9e4a",
+      "benchmark_version": "3.1.0",
+      "ground_truth_version": "3.0.0",
+      "release_date": "2026-09-10",
+      "license": "Apache-2.0",
+      "fetched_utc": "2026-09-28T12:30:02Z"
+    },
+    "command": "python3 -m vulnscan.scorecard realvuln-sample"
+  }
+}
