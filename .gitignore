@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+.pytest_cache/
+
+# audited repos are cloned locally, never committed
+targets/*
+!targets/.gitkeep
+
+# pipeline working state; commit only the final artifacts of the sample run
+reports/*
+!reports/demo_target/
+reports/demo_target/*
+!reports/demo_target/report.md
+!reports/demo_target/findings.json
+!reports/demo_target/results.sarif
+!reports/demo_target/eval.md
+!reports/demo_target/architecture.md
+!reports/demo_target/patches/
+reports/demo_target/patches/work/
+
+# benchmark downloads: reproducible with `python3 -m vulnscan.bench fetch realvuln --ref <commit>`
+# (suites in eval/suites/ pin the commit and hash every ground-truth file; scorecards are kept)
+eval/cache/
+eval/ground_truth/realvuln-*.json
+eval/ground_truth/vc-*.json
+
+# local environment logs (not part of the project)
+analysis/

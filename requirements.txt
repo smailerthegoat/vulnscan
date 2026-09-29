@@ -1,0 +1,10 @@
+# Scanners the pipeline uses for deterministic leads (all optional; the pipeline degrades gracefully)
+semgrep
+bandit
+# Optional extras, installed separately: gitleaks (secrets), osv-scanner (dependency CVEs)
+
+# Tests
+pytest
+
+# Only for the standalone API agent (python -m vulnscan); the Claude Code pipeline doesn't need it
+anthropic>=0.40
