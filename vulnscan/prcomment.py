@@ -37,10 +37,13 @@ def render(data: dict, repo: str | None = None, sha: str | None = None, min_seve
     out += [f"| {f.get('verdict_severity') or f['severity']} | {f['title'].replace('|', '/')} | {where(f)} | {f['cwe']} |"
             for f in keep]
     for f in keep:
-        out += ["", f"<details><summary><b>{f['title']}</b> ({where(f)})</summary>", "",
-                f"- **Source → sink:** {f.get('source') or '?'} → {f.get('sink') or '?'}",
-                f"- **Why it is real:** {f.get('verdict_reason') or f.get('attack_path') or ''}",
-                f"- **Fix:** {f.get('fix') or 'see the report'}", "", "</details>"]
+        out += ["", f"<details><summary><b>{f['title']}</b> ({where(f)})</summary>", ""]
+        if f.get("source") and f.get("sink"):  # scanner leads carry a rule id instead of a flow
+            out.append(f"- **Source → sink:** {f['source']} → {f['sink']}")
+        out.append(f"- **Why it is real:** {f.get('verdict_reason') or f.get('attack_path') or ''}")
+        if f.get("fix"):
+            out.append(f"- **Fix:** {f['fix']}")
+        out += ["", "</details>"]
     out += ["", f"<sub>Each issue was confirmed by a second, independent model that tried to refute it "
                 f"({refuted} other candidate(s) were refuted and are not shown). Full report and SARIF: "
                 f"workflow artifacts and the Security tab.</sub>", ""]
