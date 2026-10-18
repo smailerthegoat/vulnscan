@@ -56,7 +56,13 @@ STACKS = {
     "c": (["p/c"], None, None),
     "cpp": (["p/c"], None, None),
     "csharp": (["p/csharp"], None, None),
+    # infrastructure as code: hunted by the `iac` class (playbooks/iac.md)
+    "terraform": (["p/terraform"], None, None),
+    "docker": (["p/dockerfile"], None, None),
+    "kubernetes": (["p/kubernetes"], None, None),
+    "github-actions": (["p/github-actions"], None, None),
 }
+IAC_STACKS = ("terraform", "docker", "kubernetes", "github-actions")
 
 # framework id -> (manifest file names, regex over their text)
 FRAMEWORKS = {
@@ -93,6 +99,27 @@ def _manifests(root: Path) -> dict[str, list[Path]]:
     return found
 
 
+def _iac(root: Path) -> list[str]:
+    """Infrastructure files: Terraform, Dockerfiles, Kubernetes manifests, GitHub Actions workflows."""
+    found = set()
+    for p in root.rglob("*"):
+        rel = p.relative_to(root)
+        if not p.is_file() or p.is_symlink() or skipped_dir(root, rel.parts[:-1]):
+            continue
+        name = p.name.lower()
+        if p.suffix == ".tf":
+            found.add("terraform")
+        elif name == "dockerfile" or name.endswith(".dockerfile") or name.startswith("dockerfile."):
+            found.add("docker")
+        elif rel.parts[:2] == (".github", "workflows") and p.suffix in (".yml", ".yaml"):
+            found.add("github-actions")
+        elif p.suffix in (".yml", ".yaml") and "kubernetes" not in found:
+            head = p.read_text(errors="replace")[:4000]
+            if re.search(r"(?m)^apiVersion:", head) and re.search(r"(?m)^kind:", head):
+                found.add("kubernetes")
+    return [s for s in IAC_STACKS if s in found]
+
+
 def detect(root: Path) -> dict:
     counts = Counter(LANG_EXT[p.suffix.lower()] for p in iter_source_files(root) if p.suffix.lower() in LANG_EXT)
     total = sum(counts.values()) or 1
@@ -119,6 +146,7 @@ def detect(root: Path) -> dict:
     if "php" in langs or "composer.json" in manifests:
         stacks.append("php")
     stacks += [l for l in ("rust", "c", "cpp", "csharp") if l in langs]
+    stacks += _iac(root)
 
     frameworks = []
     for fw, (names, rx) in FRAMEWORKS.items():

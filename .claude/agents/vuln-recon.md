@@ -37,9 +37,10 @@ Create work units with:
 `python3 -m vulnscan.db <t> plan add --class <class> --scope "<comma-separated paths/globs>" --rationale "<why>"`
 
 Classes (each has a playbook at `playbooks/<class>.md`): `injection`, `access-control`, `web`,
-`crypto-secrets`, `deserialization-config`, `memory-safety`, `llm-app`, `logic`.
+`crypto-secrets`, `deserialization-config`, `memory-safety`, `llm-app`, `logic`, `iac`.
 
 - Only plan classes that apply to this stack. Memory-safety is only for C, C++ or unsafe Rust. `llm-app` only if the code calls an LLM.
+  `iac` only if `vulnscan.stacks` lists terraform, docker, kubernetes or github-actions; scope it to those files.
 - Vulnerable dependencies are handled separately (`vulnscan.deps` and the vuln-reach agent); don't plan units for them.
 - Scope each unit to where that class can actually occur, starting from the entry points and dangerous capabilities you found. Keep a unit to roughly 40 files or 5k lines at most; split big areas by directory.
 - Budget: `full` mode up to 12 units, `quick` up to 5 (highest exposure only), `diff` mode 1 to 4 units scoped to the changed files plus their direct callers and callees (find them with Grep).

@@ -73,6 +73,10 @@ picks three things per stack: Semgrep registry packs, **curated taint rules** (`
 | Ruby (Rails, Sinatra) | 11 | ActiveRecord SQLi, command incl. `Kernel#open`, eval, unsafe reflection, path, SSRF, redirect, `html_safe`/`raw`, `render inline:`, Marshal/YAML, `permit!` |
 | PHP (plain, Laravel, Symfony, WordPress) | 12 | SQLi incl. `whereRaw`/`$wpdb`, command, eval, file inclusion, path, SSRF, redirect, XSS, `unserialize`, XXE, `extract()`, mass assignment |
 
+Infrastructure files are detected too: Terraform, Dockerfiles, Kubernetes manifests and GitHub Actions workflows
+add Semgrep's IaC packs, and recon can plan `iac` hunter units (`playbooks/iac.md`). Secrets come from Gitleaks
+(scoped to the changed files in `--diff` mode) and Semgrep's `p/secrets`.
+
 Every rule has `# ruleid:` / `# ok:` fixtures in `tests/rules/`, covering the vulnerable idiom and
 the safe idioms that must not match (placeholders, `escapeshellarg`, `filepath.Base`, constant-origin
 URLs, `String()` casts, `Long` path variables and so on). `semgrep --test --config rules tests/rules`
