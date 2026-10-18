@@ -45,7 +45,7 @@ claude
 > /vuln-audit <repo> focus on auth and the REST API
 > /vuln-audit <repo> --diff origin/main                # only what changed (PR-style)
 > /vuln-audit <repo> --quick                           # cheap pass: 5 work units, validate high+ only
-> /vuln-audit <repo> --no-disclose                     # skip the disclosure drafts
+> /vuln-audit <repo> --no-disclose                     # skip the disclosure drafts (--no-patch: skip patches)
 ```
 
 Unattended, across many repos (headless `claude -p`, bounded concurrency, resumable):
@@ -55,7 +55,8 @@ python3 -m vulnscan.batch --parallel 3 demo_target https://github.com/org/a.git 
 python3 -m vulnscan.batch --list repos.txt --diff origin/main
 ```
 
-CI: `examples/ci/vulnscan-pr.yml` reviews each pull request incrementally and uploads SARIF to GitHub code scanning.
+CI: `examples/ci/vulnscan-pr.yml` reviews each pull request incrementally (`--diff --quick`), comments only
+the validator-confirmed findings on the PR (`vulnscan.prcomment`), and uploads SARIF to GitHub code scanning.
 
 ## What each stage adds
 
@@ -130,7 +131,7 @@ python3 -m vulnscan.bench fetch realvuln --with-reference   # 140 repos, 4,138 l
 python3 -m vulnscan.bench clone realvuln                    # each repo at its pinned commit
 python3 -m vulnscan.bench baseline realvuln [--reference]   # plain Semgrep (yours, or RealVuln's published run)
 python3 -m vulnscan.bench sast realvuln                     # vulnscan's deterministic stages (no LLM)
-python3 -m vulnscan.bench run realvuln --parallel 2         # the full /vuln-audit pipeline (uses your subscription)
+python3 -m vulnscan.bench run realvuln --parallel 2         # /vuln-audit: hunt + validate, no patches or drafts (uses your subscription)
 python3 -m vulnscan.scorecard realvuln [--strict]           # eval/scorecards/realvuln/scorecard.md
 ```
 
@@ -267,6 +268,7 @@ vulnscan/
   bench.py       RealVuln suites: fetch, pinned clone, baselines, runs
   scorecard.py   multi-repo scorecard with CIs and paired tests
   sarif.py       SARIF 2.1.0 with stable fingerprints (findings + reachable dependencies)
+  prcomment.py   pull-request comment with validated findings only (used by the CI workflow)
   batch.py       headless multi-repo runner
   targets.py     safe add/remove of audit targets (branch, tag or exact commit)
   agent.py, tools.py, __main__.py   standalone single-agent mode via the Anthropic API
