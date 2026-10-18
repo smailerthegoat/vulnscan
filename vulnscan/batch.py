@@ -43,6 +43,10 @@ def audit(name: str, args) -> dict:
         prompt += f" --diff {args.diff}"
     if args.quick:
         prompt += " --quick"
+    if args.no_patch:
+        prompt += " --no-patch"
+    if args.no_disclose:
+        prompt += " --no-disclose"
     if args.focus:
         prompt += f" {args.focus}"
     cmd = ["claude", "-p", prompt, "--output-format", "json"]
@@ -80,6 +84,8 @@ def main(argv=None) -> int:
     ap.add_argument("--timeout", type=int, default=3600, help="seconds per target")
     ap.add_argument("--diff", metavar="REF", help="incremental mode: only audit changes since REF")
     ap.add_argument("--quick", action="store_true", help="cheap pass: few work units, validate high+ only")
+    ap.add_argument("--no-patch", action="store_true", help="skip the patch stage")
+    ap.add_argument("--no-disclose", action="store_true", help="skip the disclosure drafts")
     ap.add_argument("--focus", default="", help="extra focus passed to the skill")
     ap.add_argument("--model", help="model for the orchestrating session (subagents set their own)")
     ap.add_argument("--force", action="store_true", help="re-audit targets that already have a report")

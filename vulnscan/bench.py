@@ -218,7 +218,8 @@ def run(suite: dict, args) -> int:
     names = [r["target"] for r in selected(suite, args.repos) if (common.TARGETS / r["target"]).is_dir()]
     if not names:
         raise SystemExit("nothing cloned; run `bench clone` first")
-    argv = names + ["--parallel", str(args.parallel), "--timeout", str(args.timeout)]
+    # Patches and advisory drafts don't change a verdict, so a benchmark run skips them.
+    argv = names + ["--parallel", str(args.parallel), "--timeout", str(args.timeout), "--no-patch", "--no-disclose"]
     if args.force:
         argv.append("--force")
     if args.quick:

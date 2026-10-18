@@ -1,7 +1,7 @@
 ---
 name: vuln-audit
 description: Run the multi-agent security audit pipeline (recon → SAST leads → parallel hunters → adversarial validator → dependency reachability → patcher → disclosure drafts → report/SARIF) on a repository under targets/. Use when the user asks to scan, audit, or security-review a target repo.
-argument-hint: <target> [--diff <git-ref>] [--quick] [--no-disclose] [focus text]
+argument-hint: <target> [--diff <git-ref>] [--quick] [--no-patch] [--no-disclose] [focus text]
 ---
 
 # /vuln-audit orchestrator
@@ -10,7 +10,8 @@ Arguments: `$ARGUMENTS`
 
 Parse them as: the first word is the target (a directory under `targets/`); `--diff <ref>` selects
 incremental mode (audit only changes since that git ref); `--quick` selects a cheap pass;
-`--no-disclose` skips the disclosure stage; any remaining words are the operator's focus. If no
+`--no-patch` skips the patch stage and `--no-disclose` the disclosure stage (benchmark runs pass
+both: neither affects the score); any remaining words are the operator's focus. If no
 target is given, list `targets/` and run this procedure for each one.
 
 You are the orchestrator. Keep your own context small: delegate code reading to subagents,
@@ -75,7 +76,7 @@ or 10 in `--quick` mode). Split into batches of up to 8 and spawn one **vuln-rea
 (dev-only, not imported, symbol-level reachable/unreachable) need no agent.
 
 ## 6. Patch (parallel subagents)
-Skip in `--quick` mode. Take the confirmed findings with severity critical, high or medium that
+Skip in `--quick` mode and with `--no-patch`. Take the confirmed findings with severity critical, high or medium that
 don't have a patch yet (`list --status confirmed --format json`, `patch_path` null) and put them in
 batches of up to 4. Spawn one **vuln-patcher** per batch, at most 3 at once.
 

@@ -1,7 +1,7 @@
 # vulnscan workspace
 
 This repo is a multi-agent security-audit workspace. Claude Code is the agent runtime; the code
-being audited lives in `targets/`. Run audits with `/vuln-audit <target> [--diff REF] [--quick] [--no-disclose] [focus]`.
+being audited lives in `targets/`. Run audits with `/vuln-audit <target> [--diff REF] [--quick] [--no-patch] [--no-disclose] [focus]`.
 
 ## Layout
 - `targets/<name>/`: repos under audit. **Read-only**: never edit, execute, install or build them;
