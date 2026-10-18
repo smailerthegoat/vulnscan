@@ -21,3 +21,10 @@ def test_lists_only_confirmed_findings_at_or_above_the_threshold():
 def test_quiet_comment_when_nothing_is_confirmed():
     md = prcomment.render({"findings": [_f(1, "refuted", "high", "trap")]}, min_severity="medium")
     assert "no confirmed medium+ issues" in md and "1 refuted" in md and "|" not in md
+
+
+def test_findings_on_neighbouring_lines_become_one_entry():
+    data = {"findings": [_f(1, "confirmed", "high", "SQL injection", 37), _f(2, "confirmed", "high", "Tainted SQL", 38),
+                         _f(3, "confirmed", "high", "Command injection", 49)]}
+    md = prcomment.render(data, min_severity="medium")
+    assert "2 confirmed issue(s)" in md and "Also reported as:** Tainted SQL (CWE-89)" in md

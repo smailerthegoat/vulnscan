@@ -15,11 +15,26 @@ from .common import SEVERITIES, report_dir
 MARKER = "<!-- vulnscan -->"
 
 
+def merge_nearby(findings: list[dict], slack: int = 3) -> list[dict]:
+    """One entry per sink: findings in the same file within `slack` lines describe one change to review
+    (a scanner rule and a hunter often report the same injection on neighbouring lines). Input is sorted
+    most severe first, so the kept entry is the most severe; the others become `also`."""
+    out: list[dict] = []
+    for f in findings:
+        same = next((k for k in out if k["file"] == f["file"] and abs(k["line"] - f["line"]) <= slack), None)
+        if same:
+            same.setdefault("also", []).append(f"{f['title']} ({f['cwe']})")
+        else:
+            out.append(dict(f))
+    return out
+
+
 def render(data: dict, repo: str | None = None, sha: str | None = None, min_severity: str = "medium") -> str:
     rank = {s: i for i, s in enumerate(SEVERITIES)}
     keep = [f for f in data["findings"] if f["status"] == "confirmed"
             and rank.get(f.get("verdict_severity") or f["severity"], 9) <= rank[min_severity]]
     keep.sort(key=lambda f: (rank.get(f.get("verdict_severity") or f["severity"], 9), f["file"], f["line"]))
+    keep = merge_nearby(keep)
     refuted = sum(f["status"] == "refuted" for f in data["findings"])
 
     def where(f: dict) -> str:
@@ -41,6 +56,8 @@ def render(data: dict, repo: str | None = None, sha: str | None = None, min_seve
         if f.get("source") and f.get("sink"):  # scanner leads carry a rule id instead of a flow
             out.append(f"- **Source → sink:** {f['source']} → {f['sink']}")
         out.append(f"- **Why it is real:** {f.get('verdict_reason') or f.get('attack_path') or ''}")
+        if f.get("also"):
+            out.append(f"- **Also reported as:** {'; '.join(f['also'])}")
         if f.get("fix"):
             out.append(f"- **Fix:** {f['fix']}")
         out += ["", "</details>"]
