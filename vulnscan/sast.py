@@ -174,7 +174,7 @@ def bandit(root: Path, out: Path, files: list[str] | None, log: list) -> list[di
     return leads
 
 
-def gitleaks(root: Path, out: Path, log: list) -> list[dict]:
+def gitleaks(root: Path, out: Path, log: list, files: list[str] | None = None) -> list[dict]:
     if not tool("gitleaks"):
         log.append("gitleaks: not installed (optional)")
         return []
@@ -189,6 +189,8 @@ def gitleaks(root: Path, out: Path, log: list) -> list[dict]:
     leads = [{"tool": "gitleaks", "title": f"hardcoded secret ({x['RuleID']})", "rule": x["RuleID"],
               "severity": "high", "cwe": "CWE-798", "file": rel(x["File"], root), "line": x["StartLine"],
               "description": x.get("Description", "")} for x in results]
+    if files is not None:  # diff mode: only secrets in the changed files
+        leads = [l for l in leads if l["file"] in set(files)]
     log.append(f"gitleaks: {len(leads)} secrets")
     return leads
 
@@ -258,7 +260,7 @@ def main(argv=None) -> int:
     leads = semgrep(root, out, files, args.project_rules_only, log,
                     args.offline)
     if not args.project_rules_only:
-        leads += bandit(root, out, files, log) + gitleaks(root, out, log)
+        leads += bandit(root, out, files, log) + gitleaks(root, out, log, files)
     import_leads(conn, args.target, root, leads, args.max_leads, log)
     print("\n".join(log))
     return 0

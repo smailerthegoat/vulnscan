@@ -46,9 +46,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install scanners and Claude Code
+        env:
+          GITLEAKS_VERSION: 8.30.1
         run: |
           pip install --quiet semgrep bandit
           npm install --global --silent @anthropic-ai/claude-code
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin" gitleaks
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # Headless Claude Code ignores a workspace's permission rules until the workspace is trusted. Only the
       # vulnscan checkout is trusted: its settings come from VULNSCAN_REPO, never from the pull request.

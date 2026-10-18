@@ -116,3 +116,23 @@ def test_lead_budget_is_shared_round_robin_across_classes():
     order = sast.prioritize(flood + csrf)
     assert order[1]["cwe"] == "CWE-352"  # one medium CSRF lead is not buried under 50 high XSS leads
     assert len(order) == 51
+
+
+def test_infrastructure_files_add_iac_stacks_and_packs(tmp_path):
+    info = stacks.detect(make(tmp_path, {
+        "app.py": "", "infra/main.tf": 'resource "aws_s3_bucket" "b" {}', "Dockerfile": "FROM python:3.12",
+        "k8s/deploy.yaml": "apiVersion: apps/v1\nkind: Deployment\n", ".github/workflows/ci.yml": "on: push\n",
+        "config/settings.yaml": "debug: false\n"}))
+    assert [s for s in info["stacks"] if s in stacks.IAC_STACKS] == ["terraform", "docker", "kubernetes",
+                                                                       "github-actions"]
+    assert {"p/terraform", "p/dockerfile", "p/kubernetes", "p/github-actions"} <= set(info["semgrep_packs"])
+    assert not stacks._iac(make(tmp_path / "plain", {"settings.yaml": "debug: false\n"}))
+
+
+@pytest.mark.skipif(not sast.tool("gitleaks"), reason="gitleaks not installed")
+def test_gitleaks_finds_secrets_and_keeps_only_changed_files_in_diff_mode(tmp_path):
+    key = "AKIA" + "Z3MXQ7PLK2RT4WNB"  # split so the repo itself holds no key-shaped literal
+    root = make(tmp_path / "t", {"a.py": f'AWS_KEY = "{key}"\n', "b.py": f'KEY = "{key}"\n'})
+    (tmp_path / "out").mkdir()
+    assert {l["file"] for l in sast.gitleaks(root, tmp_path / "out", [])} == {"a.py", "b.py"}
+    assert [l["file"] for l in sast.gitleaks(root, tmp_path / "out", [], ["b.py"])] == ["b.py"]
