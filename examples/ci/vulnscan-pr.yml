@@ -50,6 +50,12 @@ jobs:
           pip install --quiet semgrep bandit
           npm install --global --silent @anthropic-ai/claude-code
 
+      # Headless Claude Code ignores a workspace's permission rules until the workspace is trusted. Only the
+      # vulnscan checkout is trusted: its settings come from VULNSCAN_REPO, never from the pull request.
+      - name: Trust the vulnscan workspace
+        run: |
+          python3 -c "import json, os; p = os.path.expanduser('~/.claude.json'); d = json.load(open(p)) if os.path.exists(p) else {}; d.setdefault('projects', {}).setdefault(os.getcwd(), {})['hasTrustDialogAccepted'] = True; json.dump(d, open(p, 'w'))"
+
       - name: Review only what this pull request changes
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
