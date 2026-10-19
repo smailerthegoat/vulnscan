@@ -51,6 +51,7 @@ jobs:
         run: |
           pip install --quiet semgrep bandit
           npm install --global --silent @anthropic-ai/claude-code
+          sudo apt-get install --yes --quiet ripgrep   # the agents' Grep tool searches with ripgrep
           mkdir -p "$HOME/.local/bin"
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | tar -xz -C "$HOME/.local/bin" gitleaks
@@ -65,6 +66,7 @@ jobs:
       - name: Review only what this pull request changes
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          USE_BUILTIN_RIPGREP: "0"   # use the system ripgrep installed above
         run: |
           claude -p "/vuln-audit pr --diff origin/${{ github.base_ref }} --no-patch" --output-format json > run.json || true
           python3 -c "import json; m = json.load(open('run.json')); print('error:', m.get('is_error'), '| turns:', m.get('num_turns')); print(str(m.get('result'))[:3000])"
