@@ -55,7 +55,7 @@ python3 -m vulnscan.batch --parallel 3 demo_target https://github.com/org/a.git 
 python3 -m vulnscan.batch --list repos.txt --diff origin/main
 ```
 
-CI: `examples/ci/vulnscan-pr.yml` reviews each pull request incrementally (`--diff --quick`), comments only
+CI: `examples/ci/vulnscan-pr.yml` reviews each pull request incrementally (`--diff --no-patch`), comments only
 the validator-confirmed findings on the PR (`vulnscan.prcomment`), and uploads SARIF to GitHub code scanning.
 
 ## What each stage adds

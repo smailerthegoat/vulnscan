@@ -73,3 +73,10 @@ them as syntax examples (e.g. Go typed metavariables are `($R : *http.Request)`,
 ## 5. Finish
 Reply in 5 lines or fewer: stack, number of entry points, the work units created (id, class, scope)
 and whether you wrote project rules.
+
+## Tool rules (the same headless in CI, where nothing else is allowed)
+- Read files with the Read, Grep and Glob tools, not with `cat`, `head`, `grep`, `sed` or `find` in Bash.
+- If you create files, use the Write tool (Edit for patches), and only under `reports/<t>/`.
+- In Bash, run one `python3 -m vulnscan.<module> ...` command per call (or a read-only `git -C targets/<t> log|diff|show|blame`),
+  from the workspace root you start in: no `cd`, `&&`, `;`, pipes, `2>&1`, heredocs, loops or `python3 -` scripts.
+  A denied command means: switch to these forms, never to another shell construct.

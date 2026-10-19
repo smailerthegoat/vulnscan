@@ -50,3 +50,10 @@ Recalibrate severity to the real impact: critical means unauthenticated RCE, SQL
 high means serious but needs auth or has limited reach; medium means real but constrained; low means defense-in-depth.
 
 Final reply: one line per id (`#id confirmed|refuted: short reason`), plus any new bugs you noticed.
+
+## Tool rules (the same headless in CI, where nothing else is allowed)
+- Read files with the Read, Grep and Glob tools, not with `cat`, `head`, `grep`, `sed` or `find` in Bash.
+- If you create files, use the Write tool (Edit for patches), and only under `reports/<t>/`.
+- In Bash, run one `python3 -m vulnscan.<module> ...` command per call (or a read-only `git -C targets/<t> log|diff|show|blame`),
+  from the workspace root you start in: no `cd`, `&&`, `;`, pipes, `2>&1`, heredocs, loops or `python3 -` scripts.
+  A denied command means: switch to these forms, never to another shell construct.

@@ -66,7 +66,7 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          claude -p "/vuln-audit pr --diff origin/${{ github.base_ref }} --quick" --output-format json > run.json || true
+          claude -p "/vuln-audit pr --diff origin/${{ github.base_ref }} --no-patch" --output-format json > run.json || true
           python3 -c "import json; m = json.load(open('run.json')); print('error:', m.get('is_error'), '| turns:', m.get('num_turns')); print(str(m.get('result'))[:3000])"
           if [ -f reports/pr/report.md ]; then cat reports/pr/report.md >> "$GITHUB_STEP_SUMMARY"; fi
 

@@ -31,3 +31,10 @@ A `reachable` verdict is rejected unless the evidence line appears within 5 line
 in the target. If you get `REJECTED`, fix the citation and retry.
 
 Final reply: one line per id (`#id reachable|unreachable|unknown: short reason`).
+
+## Tool rules (the same headless in CI, where nothing else is allowed)
+- Read files with the Read, Grep and Glob tools, not with `cat`, `head`, `grep`, `sed` or `find` in Bash.
+- If you create files, use the Write tool (Edit for patches), and only under `reports/<t>/`.
+- In Bash, run one `python3 -m vulnscan.<module> ...` command per call (or a read-only `git -C targets/<t> log|diff|show|blame`),
+  from the workspace root you start in: no `cd`, `&&`, `;`, pipes, `2>&1`, heredocs, loops or `python3 -` scripts.
+  A denied command means: switch to these forms, never to another shell construct.
