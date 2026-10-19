@@ -31,22 +31,35 @@ It runs on your **Claude Code subscription** (no API key needed) and scales from
             report.md · findings.json · results.sarif · patches/*.diff · advisories/*.md + *.osv.json · eval.md
 ```
 
-## Quick start
+## Using it on your project
+
+Two ways: audit a repository yourself when you want, or have every pull request reviewed automatically.
+Both run on a Claude subscription (no API key) and count against its usage limits.
+
+### 1. Audit a repository yourself
+
+Needs Python 3.10+ and Claude Code (run `claude` once to log in).
 
 ```bash
+git clone https://github.com/smailerthegoat/vulnscan.git && cd vulnscan
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt                       # semgrep + bandit (optional but recommended)
+pip install -r requirements.txt                       # Semgrep + Bandit; Gitleaks is an optional binary on PATH
 
-python3 -m vulnscan.targets add examples/demo_target  # bundled vulnerable app with ground truth
 python3 -m vulnscan.targets add https://github.com/<owner>/<repo>.git [--ref <tag|branch|commit>]
+python3 -m vulnscan.targets add examples/demo_target  # or the bundled vulnerable app, with ground truth
 
 claude
-> /vuln-audit demo_target
+> /vuln-audit <repo>                                   # full audit
 > /vuln-audit <repo> focus on auth and the REST API
 > /vuln-audit <repo> --diff origin/main                # only what changed (PR-style)
 > /vuln-audit <repo> --quick                           # cheap pass: 5 work units, validate high+ only
 > /vuln-audit <repo> --no-disclose                     # skip the disclosure drafts (--no-patch: skip patches)
 ```
+
+The target is cloned into `targets/<repo>` and never modified. Results land in `reports/<repo>/`: `report.md`
+(ranked findings), `architecture.md` (threat model), `patches/<id>.diff` (one verified fix per finding),
+`results.sarif`, and `advisories/` (disclosure drafts, never sent). Apply a fix in your own checkout with
+`git apply <path to vulnscan>/reports/<repo>/patches/<id>.diff`.
 
 Unattended, across many repos (headless `claude -p`, bounded concurrency, resumable):
 
@@ -55,8 +68,18 @@ python3 -m vulnscan.batch --parallel 3 demo_target https://github.com/org/a.git 
 python3 -m vulnscan.batch --list repos.txt --diff origin/main
 ```
 
-CI: `examples/ci/vulnscan-pr.yml` reviews each pull request incrementally (`--diff --no-patch`), comments only
-the validator-confirmed findings on the PR (`vulnscan.prcomment`), and uploads SARIF to GitHub code scanning.
+### 2. Review every pull request automatically
+
+1. Copy `examples/ci/vulnscan-pr.yml` into your repository as `.github/workflows/vulnscan.yml`
+   (it checks out this repo, `smailerthegoat/vulnscan`; change `VULNSCAN_REPO` to use a fork).
+2. Give it your Claude login: `claude setup-token`, then `gh secret set CLAUDE_CODE_OAUTH_TOKEN -R <owner>/<repo>`.
+3. Commit the workflow. Every pull request you open or update is then reviewed on GitHub's runners
+   (`--diff --no-patch`: only the changed files and their callers). You get one PR comment with the
+   validator-confirmed findings only (`vulnscan.prcomment`), SARIF in code scanning (public repositories or
+   GitHub Advanced Security), and the full report as a workflow artifact. The check never blocks a merge.
+
+The job is locked down: pull requests from forks get no secrets, the code is checked out without credentials,
+the guard hook keeps it read-only, and agents may only call `vulnscan` commands.
 
 ## What each stage adds
 
